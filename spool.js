@@ -4,7 +4,6 @@ class LinkNode {
     this.next = next;
   }
 }
-
 class LinkList {
   constructor(){
     this.head = null;
@@ -65,7 +64,6 @@ class LinkList {
     }
   }
 }
-
 class V2d {
   constructor(x=0, y=0) { this.x = x, this.y = y }
 
@@ -82,7 +80,6 @@ class V2d {
     Math.sqrt((this.x - v.x)**2 + (this.y - v.y)**2)
   );
 }
-
 class Player {
   constructor(map = this.direction, team = 'red', spawnP = new V2d(0,0)) {
     this.team =()=> team;
@@ -113,7 +110,6 @@ class Player {
     }
   }
 }
-
 class Entity {
   constructor(owner = {}, w = 1, h = 1, vecP = new V2d(), vecV = new V2d()) {
     this.owner = owner;
@@ -174,7 +170,6 @@ class Entity {
   }
 
 }
-
 class Space {
   constructor(document, h, w) {
     this.height = h;
