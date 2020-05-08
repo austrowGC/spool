@@ -83,6 +83,7 @@ class V2d {
 class Player {
   constructor(map = this.direction, team = 'red', spawnP = new V2d(0,0)) {
     this.team =()=> team;
+    this.ships = new LinkList();
     this.direction.down = map.down;
     this.direction.left = map.left;
     this.direction.right = map.right;
@@ -185,7 +186,20 @@ class Game {
 
   Position = new V2d(0,0);
   
-  input =event=>{
+  input =(event, mode = this.mode)=>{
+    switch (mode) {
+      case 'game': return this.gameInput(event);
+      case 'menu': return this.menuInput(event);
+    }
+  };
+  menu =(window = this.window)=>{
+    const menu = window.document.createElement`div.menu`;
+    menu.appendChild(
+      ((window, el)=>(el.innerText = window.document.title, el))(window, window.document.createElement`h1.title`)
+    );
+    return menu;
+  };
+  gameInput =event=>{
     let player = this.players.head;
     let ship = this.ships.head;
     while (player) {
@@ -194,62 +208,62 @@ class Game {
       ship = ship.next;
     }
   };
-  menu =window=>{
-    const div = window.document.createElement('div.menu');
-    return div;
-  };
   menuInput =event=>{
 
   };
-  inputSetup =window=>{
+  inputSetup =(window = this.window)=>{
     return (window.addEventListener('keydown', this.input), window);
   };
   update=()=>{
     this.resolveHits();
     this.clear();
-    // process ship data
-    for (let ship = this.ships.head; ship; ship = ship.next) {
-      // process shot data
-      for (let shot = ship.data.shots.head; shot; shot = shot.next) {
-        shot.data.travel();
-        this.render(shot.data);
-        if (this.shotOOB(shot.data)) ship.data.shots.remove(shot.data);
+    for (let player = this.players.head; player; player = player.next) {
+      for (let ship = player.ships.head; ship; ship = ship.next) {
+        for (let shot = ship.data.shots.head; shot; shot = shot.next) {
+          // shot data
+          shot.data.travel();
+          this.render(shot.data);
+          if (this.shotOOB(shot.data)) ship.data.shots.remove(shot.data);
+        }
+        // ship data
+        ship.data.travel();
+        ship.data = this.damp(ship.data);
+        this.courseCorrect(ship.data);
+        this.findOverlaps(ship.data);
+        this.render(ship.data);
       }
-      ship.data.travel();
-      ship.data = this.damp(ship.data);
-      this.courseCorrect(ship.data);
-      this.findOverlaps(ship.data);
-      this.render(ship.data);
+      // player data
     }
     window.requestAnimationFrame(this.update);  // global window
   };
 
-  start(window) {
-    this.ships.clear();
+  start(window = this.window) {
     this.hits.clear();
     this.collisions.clear();
     this.inputSetup(window);
     for (let player = this.players.head; player; player = player.next) {
-      this.ships.append(new Entity(player.data, shipSide, shipSide, player.data.Position))
+      player.ships.clear();
+      player.ships.append(new Entity(player.data, shipSide, shipSide, player.data.Position))
     }
     window.document.querySelector`body`.appendChild(this.setupCanvas(window, this.width, this.height));
     this.setupContext(this.canvas);
     this.update();
   }
-
-  setupCanvas(window, w = 1, h = 1) {
-    this.canvas = window.document.createElement`canvas`;
-    this.canvas.width = w;
-    this.canvas.height = h;
-    return this.canvas;
+  setupCanvas(w = 1, h = 1, window = this.window) {
+    return ((window, el)=>(
+      canvas.width = w,
+      canvas.height = h,
+      this.canvas = canvas,
+      canvas
+    ))(window.document.createElement`canvas`)
   }
   setupContext(canvas = document.createElement`canvas`) {
     this.cxt = canvas.getContext`2d`;
     return this.cxt;
   }
   renderMainMenu() {
-    this.clear();
 
+    
   }
   
   clear() {
@@ -355,6 +369,6 @@ const defaultSpawns =()=>( [
   Spool.players.append(new Player(defaultMap()[0], team[0], defaultSpawns()[0]));
   Spool.players.append(new Player(defaultMap()[1], team[1], defaultSpawns()[1]));
   // Spool.players.append(new Player(defaultMap()[2], team[2], defaultSpawns()[2]));
-  Spool.start(Spool.window);
+  Spool.start();
 
-})(window)
+})(this)
