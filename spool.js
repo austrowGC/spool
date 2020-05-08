@@ -323,9 +323,9 @@ const defaultSpawns =()=>( [
   new V2d(3*innerArena, innerArena),
   new V2d(innerArena, 3*innerArena),
 ] );
-const Spool = new Space(document, arenaSide, arenaSide);
 
-window.onload =()=>{
+((window, document)=>{
+  const Spool = new Space(document, arenaSide, arenaSide);
   Spool.players.append(new Player(defaultMap()[0], team[0], defaultSpawns()[0]));
   Spool.players.append(new Player(defaultMap()[1], team[1], defaultSpawns()[1]));
   // Spool.players.append(new Player(defaultMap()[2], team[2], defaultSpawns()[2]));
@@ -334,4 +334,4 @@ window.onload =()=>{
   Spool.initGame();
   Spool.update();
 
-}
+})(window, document)
