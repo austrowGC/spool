@@ -80,6 +80,60 @@ class V2d {
     Math.sqrt((this.x - v.x)**2 + (this.y - v.y)**2)
   );
 }
+class Collision {
+  constructor(owner = {}, onOverlap=()=>{}, onExits=()=>{}) {
+    this.owner = owner;
+    this.onOverlap = onOverlap;
+    this.onExits = onExits;
+  }
+
+  center =()=>{
+    return new V2d(
+      this.owner.Position.x+this.owner.width/2,
+      this.owner.Position.y+this.owner.height/2
+    );
+  }
+  collide(Entity) { return this.collides(Entity) ? this.onOverlap() : null; }
+  anyOOB(Entity) { return this.exceedsBound(Entity) ? this.onExits() : null; }
+  collides(Entity) {
+    // assuming squares
+    return this.owner.center().dist(Entity.Collision.center()) < this.owner.width/2 + Entity.width/2;
+  }
+  exceedsBound(Entity) {
+    return  Entity.Collision.nOOB(this)
+          | Entity.Collision.sOOB(this)
+          | Entity.Collision.eOOB(this)
+          | Entity.Collision.wOOB(this)
+  }
+  nOOB(Entity) { return this.owner.Position.y < Entity.Position.y; }
+  sOOB(Entity) { return this.owner.Position.y + this.height > Entity.Position.y + Entity.height; }
+  eOOB(Entity) { return this.owner.Position.x + this.width > Entity.Position.x + Entity.width; }
+  wOOB(Entity) { return this.owner.Position.x < Entity.Position.x; }
+
+  courseCorrect(Entity) {
+    if (Entity.Collision.nOOB(this.owner)) {
+      Entity.Velocity.y *= -1;
+      Entity.Position.y = this.owner.Position.y;
+    }
+    if (Entity.Collision.sOOB(this.owner)) {
+      Entity.Velocity.y *= -1;
+      Entity.Position.y = this.owner.height - Entity.height;
+    }
+    if (Entity.Collision.eOOB(this.owner)) {
+      Entity.Velocity.x *= -1;
+      Entity.Position.x = this.owner.width - Entity.width;
+    }
+    if (Entity.Collision.wOOB(this.owner)) {
+      Entity.Velocity.x *= -1;
+      Entity.Position.x = this.owner.Position.x;
+    }
+    return Entity;
+  }
+  shotOOB(Entity) {
+    return Entity.Collision.exceedsBound(this)
+  }
+
+}
 class Player {
   constructor(map = this.direction, team = 'red', spawnP = new V2d(0,0)) {
     this.team =()=> team;
@@ -114,36 +168,21 @@ class Entity {
   constructor(owner = {}, w = 1, h = 1, vecP = new V2d(), vecV = new V2d()) {
     this.owner = owner;
     this.width = w;
-    this.height = h
+    this.height = h;
     this.Position = vecP;  // top left
     this.Velocity = vecV;
     this.shots = new LinkList();
+    this.collision = new Collision(this);
   }
 
   team =()=>this.owner.team();
-  center =()=> new V2d(this.Position.x+this.width/2, this.Position.y+this.height/2);
   shotSpeed =()=> 12;
 
   travel() {
-    return this.Position = this.Position.sum(this.Velocity);
+    return (this.Position = this.Position.sum(this.Velocity), this);
   }
   accelerate(x, y) {
-    return this.Velocity = this.Velocity.sum(new V2d(x,y));
-  }
-  collides(Entity) {
-    return this.center().dist(Entity.center()) < this.width/2 + Entity.width/2;
-  }
-  nOOB(Entity) { return this.Position.y < Entity.Position.y; }
-  sOOB(Entity) { return this.Position.y + this.height > Entity.Position.y + Entity.height; }
-  eOOB(Entity) { return this.Position.x + this.width > Entity.Position.x + Entity.width; }
-  wOOB(Entity) { return this.Position.x < Entity.Position.x; }
-  reverseX() {
-    this.Velocity.x *= -1;
-    return this;
-  }
-  reverseY() {
-    this.Velocity.y *= -1;
-    return this;
+    return (this.Velocity = this.Velocity.sum(new V2d(x,y)), this);
   }
   up() {
     /* new projectile with -y */
@@ -170,19 +209,25 @@ class Entity {
   }
 
 }
-class Space {
-  constructor(document, h, w) {
+class Arena {
+  constructor(context, h = 0, w = 0) {
     this.height = h;
     this.width = w;
+  }
+
+}
+class Game {
+  constructor(document, h, w) {
+    this.arena = new Arena()
     this.players = new LinkList();
     this.ships = new LinkList();
     this.hits = new LinkList();
     this.collisions = new LinkList();
+    this.inputs = new LinkList();
     this.cxt = this.initContext(document);
 
   }
 
-  Position = new V2d(0,0);
   
   initContext =document=>{
     let canvas = document.createElement`canvas`;
@@ -266,19 +311,6 @@ class Space {
   resolveCollisions() {
     let collision;
   }
-  courseCorrect(Data) {
-    if (Data.nOOB(this)) (Data.reverseY(), Data.Position.y = this.Position.y);
-    if (Data.sOOB(this)) (Data.reverseY(), Data.Position.y = this.height - Data.height);
-    if (Data.eOOB(this)) (Data.reverseX(), Data.Position.x = this.width - Data.width);
-    if (Data.wOOB(this)) (Data.reverseX(), Data.Position.x = this.Position.x);
-    return Data;
-  }
-  shotOOB(Data) {
-    return  Data.nOOB(this)
-          | Data.sOOB(this)
-          | Data.eOOB(this)
-          | Data.wOOB(this);
-  }
   damp(Entity) {
     const damp=n=>(n**2 * (1/(2**8))) * ((n<0)?1:-1)
     Entity.Velocity = Entity.Velocity.sum(new V2d(
@@ -294,9 +326,6 @@ const shotSide =     4;
 const shipSide =    24;
 const arenaSide =   800;
 const innerArena =  200;
-const rng =()=> Math.random();
-const frng =()=> Math.fround(rng());
-const drng =()=> Math.trunc(rng()*10)/10;
 const defaultMap =()=>( [
   {
     up:     {code:'KeyE'  },
@@ -323,9 +352,9 @@ const defaultSpawns =()=>( [
   new V2d(3*innerArena, innerArena),
   new V2d(innerArena, 3*innerArena),
 ] );
-const Spool = new Space(document, arenaSide, arenaSide);
 
-window.onload =()=>{
+((window, document)=>{
+  const Spool = new Game(document, arenaSide, arenaSide);
   Spool.players.append(new Player(defaultMap()[0], team[0], defaultSpawns()[0]));
   Spool.players.append(new Player(defaultMap()[1], team[1], defaultSpawns()[1]));
   // Spool.players.append(new Player(defaultMap()[2], team[2], defaultSpawns()[2]));
@@ -334,4 +363,4 @@ window.onload =()=>{
   Spool.initGame();
   Spool.update();
 
-}
+})(window, document)
