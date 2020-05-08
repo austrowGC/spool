@@ -170,7 +170,7 @@ class Entity {
   }
 
 }
-class Space {
+class Game {
   constructor(document, h, w) {
     this.height = h;
     this.width = w;
@@ -325,7 +325,7 @@ const defaultSpawns =()=>( [
 ] );
 
 ((window, document)=>{
-  const Spool = new Space(document, arenaSide, arenaSide);
+  const Spool = new Game(document, arenaSide, arenaSide);
   Spool.players.append(new Player(defaultMap()[0], team[0], defaultSpawns()[0]));
   Spool.players.append(new Player(defaultMap()[1], team[1], defaultSpawns()[1]));
   // Spool.players.append(new Player(defaultMap()[2], team[2], defaultSpawns()[2]));
