@@ -171,31 +171,20 @@ class Entity {
 
 }
 class Game {
-  constructor(document, h, w) {
-    this.height = h;
+  constructor(window, h, w) {
+    this.window = window;
     this.width = w;
+    this.height = h;
     this.players = new LinkList();
     this.ships = new LinkList();
     this.hits = new LinkList();
     this.collisions = new LinkList();
-    this.cxt = this.initContext(document);
-
+    this.canvas;
+    this.cxt;
   }
 
   Position = new V2d(0,0);
   
-  initContext =document=>{
-    let canvas = document.createElement`canvas`;
-    canvas.width = this.width;
-    canvas.height = this.height;
-    document.querySelector`body`.appendChild(canvas);
-    return canvas.getContext`2d`;
-  };
-  initGame =()=>{
-    for (let player = this.players.head; player; player = player.next) {
-      this.ships.append(new Entity(player.data, shipSide, shipSide, player.data.Position))
-    }
-  };
   input =event=>{
     let player = this.players.head;
     let ship = this.ships.head;
@@ -205,7 +194,16 @@ class Game {
       ship = ship.next;
     }
   };
-  inputSetup =()=>{ return (window.addEventListener('keydown', e=>{ console.log(this) }), window)};
+  menu =window=>{
+    const div = window.document.createElement('div.menu');
+    return div;
+  };
+  menuInput =event=>{
+
+  };
+  inputSetup =window=>{
+    return (window.addEventListener('keydown', this.input), window);
+  };
   update=()=>{
     this.resolveHits();
     this.clear();
@@ -226,6 +224,34 @@ class Game {
     window.requestAnimationFrame(this.update);  // global window
   };
 
+  start(window) {
+    this.ships.clear();
+    this.hits.clear();
+    this.collisions.clear();
+    this.inputSetup(window);
+    for (let player = this.players.head; player; player = player.next) {
+      this.ships.append(new Entity(player.data, shipSide, shipSide, player.data.Position))
+    }
+    window.document.querySelector`body`.appendChild(this.setupCanvas(window, this.width, this.height));
+    this.setupContext(this.canvas);
+    this.update();
+  }
+
+  setupCanvas(window, w = 1, h = 1) {
+    this.canvas = window.document.createElement`canvas`;
+    this.canvas.width = w;
+    this.canvas.height = h;
+    return this.canvas;
+  }
+  setupContext(canvas = document.createElement`canvas`) {
+    this.cxt = canvas.getContext`2d`;
+    return this.cxt;
+  }
+  renderMainMenu() {
+    this.clear();
+
+  }
+  
   clear() {
     this.cxt.clearRect(0, 0, this.width, this.height)
   }
@@ -324,14 +350,11 @@ const defaultSpawns =()=>( [
   new V2d(innerArena, 3*innerArena),
 ] );
 
-((window, document)=>{
-  const Spool = new Game(document, arenaSide, arenaSide);
+((window)=>{
+  const Spool = new Game(window, arenaSide, arenaSide);
   Spool.players.append(new Player(defaultMap()[0], team[0], defaultSpawns()[0]));
   Spool.players.append(new Player(defaultMap()[1], team[1], defaultSpawns()[1]));
   // Spool.players.append(new Player(defaultMap()[2], team[2], defaultSpawns()[2]));
+  Spool.start(Spool.window);
 
-  window.addEventListener('keydown', Spool.input);
-  Spool.initGame();
-  Spool.update();
-
-})(window, document)
+})(window)
