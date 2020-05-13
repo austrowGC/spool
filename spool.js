@@ -94,40 +94,9 @@ class Collision {
     );
   }
   collide(Entity) { return this.collides(Entity) ? this.onOverlap() : null; }
-  anyOOB(Entity) { return this.exceedsBound(Entity) ? this.onExits() : null; }
   collides(Entity) {
     // assuming squares
     return this.owner.center().dist(Entity.Collision.center()) < this.owner.width/2 + Entity.width/2;
-  }
-  exceedsBound(Entity) {
-    return  Entity.Collision.nOOB(this)
-          | Entity.Collision.sOOB(this)
-          | Entity.Collision.eOOB(this)
-          | Entity.Collision.wOOB(this)
-  }
-  nOOB(Entity) { return this.owner.Position.y < Entity.Position.y; }
-  sOOB(Entity) { return this.owner.Position.y + this.height > Entity.Position.y + Entity.height; }
-  eOOB(Entity) { return this.owner.Position.x + this.width > Entity.Position.x + Entity.width; }
-  wOOB(Entity) { return this.owner.Position.x < Entity.Position.x; }
-
-  courseCorrect(Entity) {
-    if (Entity.Collision.nOOB(this.owner)) {
-      Entity.Velocity.y *= -1;
-      Entity.Position.y = this.owner.Position.y;
-    }
-    if (Entity.Collision.sOOB(this.owner)) {
-      Entity.Velocity.y *= -1;
-      Entity.Position.y = this.owner.height - Entity.height;
-    }
-    if (Entity.Collision.eOOB(this.owner)) {
-      Entity.Velocity.x *= -1;
-      Entity.Position.x = this.owner.width - Entity.width;
-    }
-    if (Entity.Collision.wOOB(this.owner)) {
-      Entity.Velocity.x *= -1;
-      Entity.Position.x = this.owner.Position.x;
-    }
-    return Entity;
   }
   shotOOB(Entity) {
     return Entity.Collision.exceedsBound(this)
@@ -176,7 +145,7 @@ class Entity {
   }
 
   team =()=>this.owner.team();
-  shotSpeed =()=> 12;
+  defaultShotVel =()=> 12;
 
   travel() {
     return (this.Position = this.Position.sum(this.Velocity), this);
@@ -186,33 +155,68 @@ class Entity {
   }
   up() {
     /* new projectile with -y */
-    this.shoot(new V2d(0, -this.shotSpeed()));
+    this.shoot(new V2d(0, -this.defaultShotVel()));
   }
   left() {
     /* new projectile with -x */
-    this.shoot(new V2d(-this.shotSpeed(), 0));
+    this.shoot(new V2d(-this.defaultShotVel(), 0));
 
   }
   down() {
     /* new projectile with +y */
-    this.shoot(new V2d(0, this.shotSpeed()));
+    this.shoot(new V2d(0, this.defaultShotVel()));
 
   }
   right() {
     /* new projectile with +x */
-    this.shoot(new V2d(this.shotSpeed(), 0));
+    this.shoot(new V2d(this.defaultShotVel(), 0));
 
   }
   shoot(velocity = new V2d()) {
     this.shots.append(new Entity(this, shotSide, shotSide, this.center(), velocity));
-    this.Velocity = this.Velocity.sum(velocity.product(-3/this.shotSpeed()));
+    this.Velocity = this.Velocity.sum(velocity.product(-3/this.defaultShotVel()));
   }
 
 }
 class Arena {
-  constructor(context, h = 0, w = 0) {
+  constructor(context, h = this.defaultSide(), w = h) {
     this.height = h;
     this.width = w;
+  }
+
+  defaultSide =()=> 600;
+  innerOffset =n=> n/4;
+
+  nOOB(Entity) { return this.owner.Position.y < Entity.Position.y; }
+  sOOB(Entity) { return this.owner.Position.y + this.height > Entity.Position.y + Entity.height; }
+  eOOB(Entity) { return this.owner.Position.x + this.width > Entity.Position.x + Entity.width; }
+  wOOB(Entity) { return this.owner.Position.x < Entity.Position.x; }
+  anyOOB(Entity) { return this.exceedsBound(Entity) ? this.onExits() : null; }
+  exceedsBound(Entity) {
+    return  Entity.Collision.nOOB(this)
+          | Entity.Collision.sOOB(this)
+          | Entity.Collision.eOOB(this)
+          | Entity.Collision.wOOB(this)
+  }
+
+  courseCorrect(Entity) {
+    if (Entity.Collision.nOOB(this.owner)) {
+      Entity.Velocity.y *= -1;
+      Entity.Position.y = this.owner.Position.y;
+    }
+    if (Entity.Collision.sOOB(this.owner)) {
+      Entity.Velocity.y *= -1;
+      Entity.Position.y = this.owner.height - Entity.height;
+    }
+    if (Entity.Collision.eOOB(this.owner)) {
+      Entity.Velocity.x *= -1;
+      Entity.Position.x = this.owner.width - Entity.width;
+    }
+    if (Entity.Collision.wOOB(this.owner)) {
+      Entity.Velocity.x *= -1;
+      Entity.Position.x = this.owner.Position.x;
+    }
+    return Entity;
   }
 
 }
@@ -227,7 +231,6 @@ class Game {
     this.cxt = this.initContext(document);
 
   }
-
   
   initContext =document=>{
     let canvas = document.createElement`canvas`;
@@ -254,19 +257,22 @@ class Game {
   update=()=>{
     this.resolveHits();
     this.clear();
-    // process ship data
-    for (let ship = this.ships.head; ship; ship = ship.next) {
-      // process shot data
-      for (let shot = ship.data.shots.head; shot; shot = shot.next) {
-        shot.data.travel();
-        this.render(shot.data);
-        if (this.shotOOB(shot.data)) ship.data.shots.remove(shot.data);
+    for (let player = this.players.head; player; player = player.next) {
+      // player data
+      for (let ship = player.data.ships.head; ship; ship = ship.next) {
+        // ship data
+        for (let shot = ship.data.shots.head; shot; shot = shot.next) {
+          // shot data
+          shot.data.travel();
+          this.render(shot.data);
+          if (this.shotOOB(shot.data)) ship.data.shots.remove(shot.data);
+        }
+        ship.data.travel();
+        ship.data = this.damp(ship.data);
+        this.courseCorrect(ship.data);
+        this.findOverlaps(ship.data);
+        this.render(ship.data);
       }
-      ship.data.travel();
-      ship.data = this.damp(ship.data);
-      this.courseCorrect(ship.data);
-      this.findOverlaps(ship.data);
-      this.render(ship.data);
     }
     window.requestAnimationFrame(this.update);  // global window
   };
@@ -276,7 +282,8 @@ class Game {
   }
   render(Entity) {
     this.cxt.fillStyle = Entity.team();
-    this.cxt.fillRect(Entity.Position.x, Entity.Position.y, Entity.width, Entity.height);
+    // this.cxt.fillRect(Entity.Position.x, Entity.Position.y, Entity.width, Entity.height);
+    this.cxt.fill
     return Entity;
   }
   findOverlaps(Data) {
@@ -322,10 +329,7 @@ class Game {
 }
 
 const team =       [ 'cyan', 'magenta', 'yellow', 'grey' ];
-const shotSide =     4;
 const shipSide =    24;
-const arenaSide =   800;
-const innerArena =  200;
 const defaultMap =()=>( [
   {
     up:     {code:'KeyE'  },
