@@ -112,7 +112,8 @@ class Player {
     this.direction.up = map.up;
     this.Position = spawnP;
   }
-
+  
+  ships = new LinkList();
   direction = {
     up: {},
     down: {},
@@ -179,13 +180,26 @@ class Entity {
 
 }
 class Arena {
-  constructor(context, h = this.defaultSide(), w = h) {
-    this.height = h;
-    this.width = w;
+  constructor(window, h = null, w = h) {
+    this.height = h??this.defaultSide();
+    this.width = w??this.defaultSide();
+    this.cxt = ((body, canvas)=>(
+      canvas.width = this.width,
+      canvas.height = this.height,
+      body.appendChild(canvas),
+      canvas.getContext`2d`
+    ))(window.document.querySelector`body`, window.document.createElement`canvas`)
+
   }
 
   defaultSide =()=> 600;
-  innerOffset =n=> n/4;
+  innerOffset =(n=this.defaultSide())=> n/4;
+  defaultSpawns =()=>( [
+    new V2d(this.innerOffset(), this.innerOffset()),
+    new V2d(3*this.innerOffset(), 3*this.innerOffset()),
+    new V2d(3*this.innerOffset(), this.innerOffset()),
+    new V2d(this.innerOffset(), 3*this.innerOffset()),
+  ] );
 
   nOOB(Entity) { return this.owner.Position.y < Entity.Position.y; }
   sOOB(Entity) { return this.owner.Position.y + this.height > Entity.Position.y + Entity.height; }
@@ -219,100 +233,154 @@ class Arena {
     return Entity;
   }
 
+  render(Entity) {
+    this.cxt.fillStyle = Entity.team();
+    this.cxt.fillRect(Entity.Position.x, Entity.Position.y, Entity.width, Entity.height);
+    // this.cxt.fill
+    return Entity;
+  }
+
 }
 class Game {
-  constructor(document, h, w) {
-    this.arena = new Arena()
+  constructor(window) {
+    this.window = window;
     this.players = new LinkList();
-    this.ships = new LinkList();
     this.hits = new LinkList();
     this.collisions = new LinkList();
     this.inputs = new LinkList();
-    this.cxt = this.initContext(document);
-
   }
   
-  initContext =document=>{
-    let canvas = document.createElement`canvas`;
-    canvas.width = this.width;
-    canvas.height = this.height;
-    document.querySelector`body`.appendChild(canvas);
-    return canvas.getContext`2d`;
-  };
-  initGame =()=>{
-    for (let player = this.players.head; player; player = player.next) {
-      this.ships.append(new Entity(player.data, shipSide, shipSide, player.data.Position))
+  input =(event, mode = this.mode)=>{
+    switch (mode) {
+      case 'game': return this.gameInput(event);
+      case 'menu': return this.menuInput(event);
     }
   };
-  input =event=>{
+  gameInput =event=>{
     let player = this.players.head;
-    let ship = this.ships.head;
     while (player) {
-      player.data.action(event, ship.data);
+      player.data.action(event, player.data.ships.head.data);
       player = player.next;
-      ship = ship.next;
     }
   };
-  inputSetup =()=>{ return (window.addEventListener('keydown', e=>{ console.log(this) }), window)};
+  menuInput =event=>{
+
+  };
+  inputSetup =(window = this.window)=>{
+    return (
+      window.addEventListener('keydown', this.input),
+      window);
+  };
+  assignMenuEvents =(game, window = this.window)=>(
+    window.document.querySelector`start`.addEventListener('click', e=>(game.initGame(window)))
+
+  );
+  menu =(window = this.window)=>{
+    const menu = window.document.createElement`menu`;
+    menu.appendChild(
+      ((window, header)=>(
+        header.innerText = window.document.title,
+        header
+      ))(window, window.document.createElement`header`)
+    );
+    menu.appendChild(
+      ((startButton)=>(
+        startButton.innerText = 'Start game',
+        // startButton.addEventListener('click', Game.initGame),
+        startButton
+      ))(window.document.createElement`start`)
+    )
+    return menu;
+  };
   update=()=>{
+    this.resolveGame();
     this.resolveHits();
     this.clear();
     for (let player = this.players.head; player; player = player.next) {
-      // player data
       for (let ship = player.data.ships.head; ship; ship = ship.next) {
-        // ship data
         for (let shot = ship.data.shots.head; shot; shot = shot.next) {
           // shot data
           shot.data.travel();
           this.render(shot.data);
           if (this.shotOOB(shot.data)) ship.data.shots.remove(shot.data);
         }
+        // ship data
         ship.data.travel();
         ship.data = this.damp(ship.data);
         this.courseCorrect(ship.data);
         this.findOverlaps(ship.data);
         this.render(ship.data);
       }
+      // player data
     }
     window.requestAnimationFrame(this.update);  // global window
   };
 
+  awaitMenu() {
+    this.initMenu();
+    this.assignMenuEvents(this);
+  }
+  initMenu(window = this.window) {
+    this.mode = 'menu';
+    return ((body)=>(
+      body.appendChild(this.menu())
+    ))(window.document.querySelector`body`)
+  }
+  initGame(window = this.window) {
+    ((body, menu)=>(
+      body.removeChild(menu)
+    ))(window.document.querySelector`body`, window.document.querySelector`menu`);
+    this.arena = new Arena(window);
+    this.players.clear();
+    this.players.append(new Player(defaultMap()[0], team[0], defaultSpawns()[0]));
+    this.players.append(new Player(defaultMap()[1], team[1], defaultSpawns()[1]));
+    // this.players.append(new Player(defaultMap()[2], team[2], defaultSpawns()[2]));
+    for (let player = this.players.head; player; player = player.next) {
+      // player data
+      player.data.ships.clear();
+      player.data.ships.append(new Entity(player.data, shipSide, shipSide, player.data.Position))
+    }
+    this.mode = 'game';
+    this.inputSetup(window);
+    this.update();
+  }
+  setupCanvas(w = 1, h = 1, window = this.window) {
+    return ((canvas)=>(
+      canvas.width = w,
+      canvas.height = h,
+      this.canvas = canvas,
+      canvas
+    ))(window.document.createElement`canvas`)
+  }
   clear() {
     this.cxt.clearRect(0, 0, this.width, this.height)
   }
-  render(Entity) {
-    this.cxt.fillStyle = Entity.team();
-    // this.cxt.fillRect(Entity.Position.x, Entity.Position.y, Entity.width, Entity.height);
-    this.cxt.fill
-    return Entity;
-  }
   findOverlaps(Data) {
-    let ship, shot;
-    for (ship = this.ships.head; ship; ship = ship.next) {
-      if (Data.team() == ship.data.team()) continue;
-      else {
-        for (shot = ship.data.shots.head; shot; shot = shot.next) {
-          if (Data.collides(shot.data)) {
-            this.hits.append({ship:Data, shot:shot.data});
-            // console.log(shot.data.team(), 'hits', Data.team());
+    let player, ship, shot;
+    for (player = this.players.head; player; player = player.next) {
+      for (ship = player.data.ships.head; ship; ship = ship.next) {
+        if (Data.team() == ship.data.team()) continue;
+        else {
+          for (shot = ship.data.shots.head; shot; shot = shot.next) {
+            if (Data.collides(shot.data)) {
+              this.hits.append({ship:Data, shot:shot.data});
+            }
+          }
+          if (Data.collides(ship.data)) {
+            this.collisions.append({parties:[Data, ship.data]});
           }
         }
-        if (Data.collides(ship.data)) {
-          this.collisions.append({parties:[Data, ship.data]});
-          console.log('collision', ship.data.team(), Data.team());
-        }
       }
+
     }
   }
   resolveHits() {
     let hit;
     while (this.hits.head) {
       hit = this.hits.dropHead();
-      // console.log(hit.shot.team(), 'hits', hit.ship.team());
       hit.shot.owner.shots.remove(hit.shot);
-      this.ships.remove(hit.ship);
+      hit.ship.owner.ships.remove(hit.ship);
       this.players.remove(hit.ship.owner);
-      // this.cxt.
     }
   }
   resolveCollisions() {
@@ -325,6 +393,22 @@ class Game {
       damp(Entity.Velocity.y)
     ));
     return Entity;
+  }
+  resolveGame(window = this.window) {
+    if (this.players.head.next) return false;
+    else {
+      ((body, canvas)=>(
+        console.log(canvas),
+        body.removeChild(canvas)
+      ))(window.document.querySelector`body`, window.document.querySelector`canvas`);
+      this.awaitMenu();
+      ((menu, win)=>(
+        win.innerText = this.players.head.data.team() + ' lives another day',
+        menu.appendChild(win)
+      ))(window.document.querySelector`menu`, (team=>(
+        window.document.createElement(team)
+      ))(this.players.head.data.team()))
+    }
   }
 }
 
@@ -350,21 +434,8 @@ const defaultMap =()=>( [
     right:  {code:'KeyD'  }
   }
 ] );
-const defaultSpawns =()=>( [
-  new V2d(innerArena, innerArena),
-  new V2d(3*innerArena, 3*innerArena),
-  new V2d(3*innerArena, innerArena),
-  new V2d(innerArena, 3*innerArena),
-] );
 
-((window, document)=>{
-  const Spool = new Game(document, arenaSide, arenaSide);
-  Spool.players.append(new Player(defaultMap()[0], team[0], defaultSpawns()[0]));
-  Spool.players.append(new Player(defaultMap()[1], team[1], defaultSpawns()[1]));
-  // Spool.players.append(new Player(defaultMap()[2], team[2], defaultSpawns()[2]));
-
-  window.addEventListener('keydown', Spool.input);
-  Spool.initGame();
-  Spool.update();
-
-})(window, document)
+((window)=>{
+  const Spool = new Game(window);
+  Spool.awaitMenu();
+})(this);
