@@ -178,7 +178,8 @@ class Entity {
 
 }
 class Arena {
-  constructor(window, h = null, w = h) {
+  constructor(Game, h = null, w = h) {
+    this.Game = Game;
     this.height = h??this.defaultSide();
     this.width = w??this.defaultSide();
     this.cxt = ((body, canvas)=>(
@@ -186,13 +187,13 @@ class Arena {
       canvas.height = this.height,
       body.appendChild(canvas),
       canvas.getContext`2d`
-    ))(window.document.querySelector`body`, window.document.createElement`canvas`)
+    ))(Game.window.document.querySelector`body`, Game.window.document.createElement`canvas`)
     this.cxt.strokeStyle = 'white';
   }
 
+  endAngle = 2*Math.PI;
   defaultSide =()=> 600;
   innerOffset =(n=this.defaultSide())=> n/4;
-  endAngle = 2*Math.PI;
   defaultSpawns =()=>( [
     new V2d(this.innerOffset(), this.innerOffset()),
     new V2d(3*this.innerOffset(), 3*this.innerOffset()),
@@ -200,6 +201,7 @@ class Arena {
     new V2d(this.innerOffset(), 3*this.innerOffset()),
   ] );
   team =()=> [ 'cyan', 'magenta', 'yellow', 'grey' ];
+  remove =body=>(body.removeChild(this.cxt.canvas));
 
   nOOB(Entity) { 
     return (length=>(
@@ -287,6 +289,8 @@ class Game {
     this.hits = new LinkList();
     this.collisions = new LinkList();
     this.inputs = new LinkList();
+    this.mode = 'menu';
+    this.Menu = new Menu(this);
   }
   
   ships =player=>player.ships;
@@ -312,38 +316,18 @@ class Game {
       window.addEventListener('keydown', this.input),
       window);
   };
-  assignMenuEvents =(game, window = this.window)=>(
-    window.document.querySelector`start`.addEventListener('click', e=>(game.initGame(window)))
-  );
-  menu =(window = this.window)=>{
-    const menu = window.document.createElement`menu`;
-    menu.appendChild(
-      ((window, header)=>(
-        header.innerText = window.document.title,
-        header
-      ))(window, window.document.createElement`header`)
-    );
-    menu.appendChild(
-      ((startButton)=>(
-        startButton.innerText = 'Start game',
-        // startButton.addEventListener('click', Game.initGame),
-        startButton
-      ))(window.document.createElement`start`)
-    )
-    return menu;
-  };
   update=()=>{
-    this.arena.clear();
+    this.Arena.clear();
     this.resolveCollisions();
     this.resolveHits();
     for (let player = this.players.head; player; player = player.next) {
       for (let ship = player.data.ships.head; ship; ship = ship.next) {
         for (let shot = ship.data.shots.head; shot; shot = shot.next) {
           // shot data
-          this.arena.renderShot(shot.data);
+          this.Arena.renderShot(shot.data);
         }
         // ship data
-        this.arena.renderShip(ship.data);
+        this.Arena.renderShip(ship.data);
         this.damp(ship.data);
         this.findOverlaps(ship.data);
       }
@@ -353,28 +337,18 @@ class Game {
     
   };
 
-  awaitMenu() {
-    this.initMenu();
-    this.assignMenuEvents(this);
-  }
-  initMenu(window = this.window) {
-    this.mode = 'menu';
-    return ((body)=>(
-      body.appendChild(this.menu())
-    ))(window.document.querySelector`body`)
-  }
   initGame(window = this.window) {
     ((body, menu)=>(
       body.removeChild(menu)
     ))(window.document.querySelector`body`, window.document.querySelector`menu`);
-    this.arena = new Arena(window);
+    this.Arena = new Arena(window);
     this.players.clear();
     for (let num = 2, i = 0, p; i < num; i++) {
       this.players.append(
         (player=>(
           player.ships.append(new Entity(player, {radius:12}, player.Position)),
           player
-        ))(new Player(defaultMap()[i], this.arena.team()[i], this.arena.defaultSpawns()[i]))
+        ))(new Player(defaultMap()[i], this.Arena.team()[i], this.Arena.defaultSpawns()[i]))
       );
     }
     this.mode = 'game';
@@ -393,11 +367,10 @@ class Game {
             }
           }
           if (Data.Collision.detect(ship.data)) {
-            this.collisions.append({parties:[Data, ship.data]});
+            this.collisions.append({ship1:Data,ship2:ship.data});
           }
         }
       }
-
     }
   }
   resolveHits() {
@@ -413,6 +386,8 @@ class Game {
     while (this.collisions.head) {
       (collision=>{
         console.log(collision);
+        // collision.ship1.Velocity = collision.ship1.Velocity.sum(collision.ship2.Velocity);
+        // collision
       })(this.collisions.dropHead())
     }
   }
@@ -427,29 +402,60 @@ class Game {
   resolveGame(window = this.window) {
     if (this.players.head.next) return false;
     else {
-      ((body, canvas)=>{
-        if (canvas) body.removeChild(canvas);
-      })(window.document.querySelector`body`, window.document.querySelector`canvas`);
-      this.awaitMenu();
-      ((menu, win)=>(
-        win.innerText = this.players.head.data.team() + ' lives another day',
-        menu.appendChild(win)
-      ))(window.document.querySelector`menu`, (team=>(
-        window.document.createElement(team)
-      ))(this.players.head.data.team()))
+      this.Arena.remove(window.document.querySelector`body`);
+      this.Menu.postGame(this.players.head.data.team());
     }
   }
 }
 class Menu {
-  constructor(window) {
-    this.main = window.createElement`menu`;
-    this.options = window.createElement`options`;
+  constructor(Game = {}, window = Game.window) {
+    this.Game = Game;
+    this.main = window.document.createElement`menu`;
+    this.main.appendChild(
+      ((window, header)=>(
+        header.innerText = window.document.title,
+        header
+      ))(window, window.document.createElement`header`)
+    );
+    this.main.appendChild(
+      (optionsButton=>(
+        optionsButton.innerText = 'Options',
+        optionsButton
+      ))(window.document.createElement`options`)
+    );
+    this.main.appendChild(
+      ((startButton)=>(
+        startButton.innerText = 'Start game',
+        startButton
+      ))(window.document.createElement`start`)
+    );
+    this.main.appendChild(window.document.createElement`postGame`);
+    
+    this.options = window.document.createElement`playerOptions`;
+    this.append(this.main, window);
     
   }
-  assignEvents(game, window){
-    window.document.querySelector`start`.addEventListener('click', e=>(game.initGame(window)));
+  assignEvents(Menu = this, Game = this.Game, window = Game.window){
+    window.document.querySelector`options`.addEventListener('click', e=>(Menu.openOptions(window)));
+    window.document.querySelector`start`.addEventListener('click', e=>(Game.initGame(window)));
   }
-  
+  append(element, window = this.Game.window) {
+    ((body)=>(
+      body.appendChild(element)
+    ))(window.document.querySelector`body`);
+    this.assignEvents();
+  }
+  openOptions(window = this.Game.window) {
+    console.log(window);
+  }
+  postGame(team) {
+    this.append(this.main);
+    ((element, team)=>(
+      element.innerText = team + ' lives another day',
+      element.id = team,
+      element
+    ))(this.Game.window.document.querySelector`postGame`, team);
+  }
 }
 
 const defaultMap =()=>( [
@@ -473,7 +479,6 @@ const defaultMap =()=>( [
   }
 ] );
 
-const Spool = new Game(this);
-((window, Game)=>{
-  Game.awaitMenu();
-})(this, Spool);
+((window)=>{
+  new Game(window);
+})(this);
