@@ -81,25 +81,14 @@ class V2d {
   );
 }
 class Collision {
-  constructor(owner = {}, onOverlap=()=>{}, onExits=()=>{}) {
+  constructor(owner = {}, onOverlap=()=>{}) {
     this.owner = owner;
     this.onOverlap = onOverlap;
-    this.onExits = onExits;
   }
 
-  center =()=>{
-    return new V2d(
-      this.owner.Position.x+this.owner.width/2,
-      this.owner.Position.y+this.owner.height/2
-    );
-  }
-  collide(Entity) { return this.collides(Entity) ? this.onOverlap() : null; }
-  collides(Entity) {
-    // assuming squares
-    return this.owner.center().dist(Entity.Collision.center()) < this.owner.width/2 + Entity.width/2;
-  }
-  shotOOB(Entity) {
-    return Entity.Collision.exceedsBound(this)
+  collide(Entity) { return this.detect(Entity) ? this.onOverlap() : null; }
+  detect(Entity) {
+    return this.owner.center().dist(Entity.center()) < this.owner.radius + Entity.radius;
   }
 
 }
@@ -111,9 +100,9 @@ class Player {
     this.direction.right = map.right;
     this.direction.up = map.up;
     this.Position = spawnP;
+    this.ships = new LinkList();
   }
   
-  ships = new LinkList();
   direction = {
     up: {},
     down: {},
@@ -135,18 +124,27 @@ class Player {
   }
 }
 class Entity {
-  constructor(owner = {}, w = 1, h = 1, vecP = new V2d(), vecV = new V2d()) {
+  constructor(owner = {}, shape = {}, vecP = new V2d(), vecV = new V2d()) {
     this.owner = owner;
-    this.width = w;
-    this.height = h;
+    this.team =()=> owner.team();
     this.Position = vecP;  // top left
     this.Velocity = vecV;
     this.shots = new LinkList();
-    this.collision = new Collision(this);
+    this.Collision = new Collision(this, ()=>null);
+    this.shape = shape.name;
+    this.radius = shape.radius ?? null;
+    this.width = shape.width ?? shape.radius*2;
+    this.height = shape.height ?? shape.radius*2;
+    this.center = (this.radius ?
+      ()=>this.Position :
+      ()=>new V2d(
+        this.Position.x+this.width/2,
+        this.Position.y+this.height/2
+      )
+    );
   }
 
-  team =()=>this.owner.team();
-  defaultShotVel =()=> 12;
+  defaultShotVel =()=>12;
 
   travel() {
     return (this.Position = this.Position.sum(this.Velocity), this);
@@ -174,7 +172,7 @@ class Entity {
 
   }
   shoot(velocity = new V2d()) {
-    this.shots.append(new Entity(this, shotSide, shotSide, this.center(), velocity));
+    this.shots.append(new Entity(this, {radius:3}, this.center(), velocity));
     this.Velocity = this.Velocity.sum(velocity.product(-3/this.defaultShotVel()));
   }
 
@@ -189,57 +187,98 @@ class Arena {
       body.appendChild(canvas),
       canvas.getContext`2d`
     ))(window.document.querySelector`body`, window.document.createElement`canvas`)
-
+    this.cxt.strokeStyle = 'white';
   }
 
   defaultSide =()=> 600;
   innerOffset =(n=this.defaultSide())=> n/4;
+  endAngle = 2*Math.PI;
   defaultSpawns =()=>( [
     new V2d(this.innerOffset(), this.innerOffset()),
     new V2d(3*this.innerOffset(), 3*this.innerOffset()),
     new V2d(3*this.innerOffset(), this.innerOffset()),
     new V2d(this.innerOffset(), 3*this.innerOffset()),
   ] );
+  team =()=> [ 'cyan', 'magenta', 'yellow', 'grey' ];
 
-  nOOB(Entity) { return this.owner.Position.y < Entity.Position.y; }
-  sOOB(Entity) { return this.owner.Position.y + this.height > Entity.Position.y + Entity.height; }
-  eOOB(Entity) { return this.owner.Position.x + this.width > Entity.Position.x + Entity.width; }
-  wOOB(Entity) { return this.owner.Position.x < Entity.Position.x; }
+  nOOB(Entity) { 
+    return (length=>(
+      console.log(length),
+      length > this.height))(Entity.center.y - (Entity.radius??Entity.height))
+  }
+  sOOB(Entity) { 
+    return (length=>(
+      console.log(length),
+      length > this.height))(Entity.center.y + (Entity.radius??Entity.height))
+  }
+  eOOB(Entity) { 
+    return (length=>(
+      console.log(length),
+      length > this.width))(Entity.center.x + (Entity.radius??Entity.width))
+  }
+  wOOB(Entity) { 
+    return (length=>(
+      console.log(length),
+      length < 0))(Entity.center.x - (Entity.radius??Entity.width))
+  }
   anyOOB(Entity) { return this.exceedsBound(Entity) ? this.onExits() : null; }
   exceedsBound(Entity) {
-    return  Entity.Collision.nOOB(this)
-          | Entity.Collision.sOOB(this)
-          | Entity.Collision.eOOB(this)
-          | Entity.Collision.wOOB(this)
+    return  this.nOOB(Entity)
+          | this.sOOB(Entity)
+          | this.eOOB(Entity)
+          | this.wOOB(Entity)
   }
-
   courseCorrect(Entity) {
-    if (Entity.Collision.nOOB(this.owner)) {
+    if (this.nOOB(Entity)) {
       Entity.Velocity.y *= -1;
-      Entity.Position.y = this.owner.Position.y;
+      Entity.Position.y = Entity.radius??0;
     }
-    if (Entity.Collision.sOOB(this.owner)) {
+    if (this.sOOB(Entity)) {
       Entity.Velocity.y *= -1;
-      Entity.Position.y = this.owner.height - Entity.height;
+      Entity.Position.y = this.height - Entity.radius??Entity.height;
     }
-    if (Entity.Collision.eOOB(this.owner)) {
+    if (this.eOOB(Entity)) {
       Entity.Velocity.x *= -1;
-      Entity.Position.x = this.owner.width - Entity.width;
+      Entity.Position.x = this.width - Entity.radius??Entity.width;
     }
-    if (Entity.Collision.wOOB(this.owner)) {
+    if (this.wOOB(Entity)) {
       Entity.Velocity.x *= -1;
-      Entity.Position.x = this.owner.Position.x;
+      Entity.Position.x = Entity.radius??0;
     }
     return Entity;
   }
-
+  renderShip(Entity) {
+    Entity.travel();
+    this.render(Entity);
+    return this.courseCorrect(Entity);
+  }
+  renderShot(Entity) {
+    Entity.travel();
+    this.render(Entity);
+    if (this.exceedsBound(Entity)) Entity.owner.shots.remove(Entity);
+    return Entity;
+  }
   render(Entity) {
     this.cxt.fillStyle = Entity.team();
-    this.cxt.fillRect(Entity.Position.x, Entity.Position.y, Entity.width, Entity.height);
-    // this.cxt.fill
+    if (Entity.radius) {
+      /* context2D ellipse x, y, rad1, rad2, rotation, startAngle, endAngle */
+      this.cxt.beginPath();
+      this.cxt.ellipse(Entity.Position.x, Entity.Position.y, Entity.radius, Entity.radius, 0, 0, this.endAngle);
+      this.cxt.fill();  // apply fill style, stroke for applying stroke style
+      this.cxt.closePath();
+    } else {
+      this.cxt.fillRect(Entity.Position.x, Entity.Position.y, Entity.width, Entity.height);
+    }
+    this.renderCenter(Entity);
     return Entity;
   }
-
+  clear() {
+    this.cxt.clearRect(0, 0, this.width, this.height);
+  }
+  renderCenter(Entity) {
+    this.cxt.fillStyle = 'black';
+    this.cxt.fillRect(Entity.center().x, Entity.center().y, 1, 1);
+  }
 }
 class Game {
   constructor(window) {
@@ -250,6 +289,8 @@ class Game {
     this.inputs = new LinkList();
   }
   
+  ships =player=>player.ships;
+  shots =ship=>ship.shots;
   input =(event, mode = this.mode)=>{
     switch (mode) {
       case 'game': return this.gameInput(event);
@@ -273,7 +314,6 @@ class Game {
   };
   assignMenuEvents =(game, window = this.window)=>(
     window.document.querySelector`start`.addEventListener('click', e=>(game.initGame(window)))
-
   );
   menu =(window = this.window)=>{
     const menu = window.document.createElement`menu`;
@@ -295,21 +335,17 @@ class Game {
   update=()=>{
     this.resolveGame();
     this.resolveHits();
-    this.clear();
+    this.arena.clear();
     for (let player = this.players.head; player; player = player.next) {
       for (let ship = player.data.ships.head; ship; ship = ship.next) {
         for (let shot = ship.data.shots.head; shot; shot = shot.next) {
           // shot data
-          shot.data.travel();
-          this.render(shot.data);
-          if (this.shotOOB(shot.data)) ship.data.shots.remove(shot.data);
+          this.arena.renderShot(shot.data);
         }
         // ship data
-        ship.data.travel();
-        ship.data = this.damp(ship.data);
-        this.courseCorrect(ship.data);
+        this.arena.renderShip(ship.data);
+        this.damp(ship.data);
         this.findOverlaps(ship.data);
-        this.render(ship.data);
       }
       // player data
     }
@@ -332,28 +368,17 @@ class Game {
     ))(window.document.querySelector`body`, window.document.querySelector`menu`);
     this.arena = new Arena(window);
     this.players.clear();
-    this.players.append(new Player(defaultMap()[0], team[0], defaultSpawns()[0]));
-    this.players.append(new Player(defaultMap()[1], team[1], defaultSpawns()[1]));
-    // this.players.append(new Player(defaultMap()[2], team[2], defaultSpawns()[2]));
-    for (let player = this.players.head; player; player = player.next) {
-      // player data
-      player.data.ships.clear();
-      player.data.ships.append(new Entity(player.data, shipSide, shipSide, player.data.Position))
+    for (let num = 2, i = 0, p; i < num; i++) {
+      this.players.append(
+        (player=>(
+          player.ships.append(new Entity(player, {radius:12}, player.Position)),
+          player
+        ))(new Player(defaultMap()[i], this.arena.team()[i], this.arena.defaultSpawns()[i]))
+      );
     }
     this.mode = 'game';
     this.inputSetup(window);
     this.update();
-  }
-  setupCanvas(w = 1, h = 1, window = this.window) {
-    return ((canvas)=>(
-      canvas.width = w,
-      canvas.height = h,
-      this.canvas = canvas,
-      canvas
-    ))(window.document.createElement`canvas`)
-  }
-  clear() {
-    this.cxt.clearRect(0, 0, this.width, this.height)
   }
   findOverlaps(Data) {
     let player, ship, shot;
@@ -362,11 +387,11 @@ class Game {
         if (Data.team() == ship.data.team()) continue;
         else {
           for (shot = ship.data.shots.head; shot; shot = shot.next) {
-            if (Data.collides(shot.data)) {
+            if (Data.Collision.detect(shot.data)) {
               this.hits.append({ship:Data, shot:shot.data});
             }
           }
-          if (Data.collides(ship.data)) {
+          if (Data.Collision.detect(ship.data)) {
             this.collisions.append({parties:[Data, ship.data]});
           }
         }
@@ -412,8 +437,6 @@ class Game {
   }
 }
 
-const team =       [ 'cyan', 'magenta', 'yellow', 'grey' ];
-const shipSide =    24;
 const defaultMap =()=>( [
   {
     up:     {code:'KeyE'  },
@@ -435,7 +458,7 @@ const defaultMap =()=>( [
   }
 ] );
 
-((window)=>{
-  const Spool = new Game(window);
-  Spool.awaitMenu();
-})(this);
+const Spool = new Game(this);
+((window, Game)=>{
+  Game.awaitMenu();
+})(this, Spool);
