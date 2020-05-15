@@ -333,9 +333,9 @@ class Game {
     return menu;
   };
   update=()=>{
-    this.resolveGame();
-    this.resolveHits();
     this.arena.clear();
+    this.resolveCollisions();
+    this.resolveHits();
     for (let player = this.players.head; player; player = player.next) {
       for (let ship = player.data.ships.head; ship; ship = ship.next) {
         for (let shot = ship.data.shots.head; shot; shot = shot.next) {
@@ -349,7 +349,8 @@ class Game {
       }
       // player data
     }
-    window.requestAnimationFrame(this.update);  // global window
+    if (this.resolveGame()===false) this.window.requestAnimationFrame(this.update);
+    
   };
 
   awaitMenu() {
@@ -400,16 +401,20 @@ class Game {
     }
   }
   resolveHits() {
-    let hit;
     while (this.hits.head) {
-      hit = this.hits.dropHead();
-      hit.shot.owner.shots.remove(hit.shot);
-      hit.ship.owner.ships.remove(hit.ship);
-      this.players.remove(hit.ship.owner);
+      (hit=>{
+        hit.shot.owner.shots.remove(hit.shot);
+        hit.ship.owner.ships.remove(hit.ship);
+        this.players.remove(hit.ship.owner);
+      })(this.hits.dropHead())
     }
   }
   resolveCollisions() {
-    let collision;
+    while (this.collisions.head) {
+      (collision=>{
+        console.log(collision);
+      })(this.collisions.dropHead())
+    }
   }
   damp(Entity) {
     const damp=n=>(n**2 * (1/(2**8))) * ((n<0)?1:-1)
@@ -422,9 +427,9 @@ class Game {
   resolveGame(window = this.window) {
     if (this.players.head.next) return false;
     else {
-      ((body, canvas)=>(
-        body.removeChild(canvas)
-      ))(window.document.querySelector`body`, window.document.querySelector`canvas`);
+      ((body, canvas)=>{
+        if (canvas) body.removeChild(canvas);
+      })(window.document.querySelector`body`, window.document.querySelector`canvas`);
       this.awaitMenu();
       ((menu, win)=>(
         win.innerText = this.players.head.data.team() + ' lives another day',
@@ -434,6 +439,17 @@ class Game {
       ))(this.players.head.data.team()))
     }
   }
+}
+class Menu {
+  constructor(window) {
+    this.main = window.createElement`menu`;
+    this.options = window.createElement`options`;
+    
+  }
+  assignEvents(game, window){
+    window.document.querySelector`start`.addEventListener('click', e=>(game.initGame(window)));
+  }
+  
 }
 
 const defaultMap =()=>( [
