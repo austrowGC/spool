@@ -203,23 +203,23 @@ class Arena {
 
   nOOB(Entity) { 
     return (length=>(
-      console.log(length),
-      length > this.height))(Entity.center.y - (Entity.radius??Entity.height))
+      // console.log(length),
+      length < 0))(Entity.center().y - (Entity.radius??Entity.height))
   }
   sOOB(Entity) { 
     return (length=>(
-      console.log(length),
-      length > this.height))(Entity.center.y + (Entity.radius??Entity.height))
+      // console.log(length),
+      length > this.height))(Entity.center().y + (Entity.radius??Entity.height))
   }
   eOOB(Entity) { 
     return (length=>(
-      console.log(length),
-      length > this.width))(Entity.center.x + (Entity.radius??Entity.width))
+      // console.log(length),
+      length > this.width))(Entity.center().x + (Entity.radius??Entity.width))
   }
   wOOB(Entity) { 
     return (length=>(
-      console.log(length),
-      length < 0))(Entity.center.x - (Entity.radius??Entity.width))
+      // console.log(length),
+      length < 0))(Entity.center().x - (Entity.radius??Entity.width))
   }
   anyOOB(Entity) { return this.exceedsBound(Entity) ? this.onExits() : null; }
   exceedsBound(Entity) {
@@ -423,7 +423,6 @@ class Game {
     if (this.players.head.next) return false;
     else {
       ((body, canvas)=>(
-        console.log(canvas),
         body.removeChild(canvas)
       ))(window.document.querySelector`body`, window.document.querySelector`canvas`);
       this.awaitMenu();
