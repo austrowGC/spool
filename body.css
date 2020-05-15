@@ -5,6 +5,7 @@ body {
 }
 menu {
   color: white;
+  background-color: #000;
 }
 menu > * {
   float: left;
@@ -13,8 +14,10 @@ menu > * {
 header {
   font-size: 2em;
   margin-bottom: 1em;
+  background-color: initial;
 }
-start {
+start,
+options {
   border-style: outset;
   border-color: #eee;
   border-width: 2px;
@@ -22,18 +25,19 @@ start {
   padding-left: 2px;
   padding-right: 2px;
 }
-start:active {
+start:active,
+options:active {
   border-style: inset;
 }
-cyan {
-  background-color: black;
+menu #cyan {
   color: cyan;
+  background-color: inherit;
 }
-magenta {
-  background-color: black;
+menu #magenta {
   color: magenta;
+  background-color: inherit;
 }
-yellow {
-  background-color: black;
+menu #yellow {
   color: yellow;
+  background-color: inherit;
 }
