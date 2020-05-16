@@ -185,7 +185,7 @@ class Arena {
     this.cxt = ((body, canvas)=>(
       canvas.width = this.width,
       canvas.height = this.height,
-      body.appendChild(canvas),
+      // body.appendChild(canvas),
       canvas.getContext`2d`
     ))(Game.window.document.querySelector`body`, Game.window.document.createElement`canvas`)
     this.cxt.strokeStyle = 'white';
@@ -285,7 +285,9 @@ class Arena {
 class Game {
   constructor(window) {
     this.window = window;
+    this.Arena = new Arena(window);
     this.players = new LinkList();
+    this.players.append(new Player(defaultMap()[0], this.Arena.team()[0], this.Arena.defaultSpawns()[0]))
     this.hits = new LinkList();
     this.collisions = new LinkList();
     this.inputs = new LinkList();
@@ -339,9 +341,9 @@ class Game {
 
   initGame(window = this.window) {
     ((body, menu)=>(
-      body.removeChild(menu)
+      body.removeChild(menu),
+      body.appendChild(this.Arena.cxt.canvas)
     ))(window.document.querySelector`body`, window.document.querySelector`menu`);
-    this.Arena = new Arena(window);
     this.players.clear();
     for (let num = 2, i = 0, p; i < num; i++) {
       this.players.append(
@@ -420,30 +422,34 @@ class Menu {
     this.main.appendChild(
       (optionsButton=>(
         optionsButton.innerText = 'Options',
+        this.assignEvent(optionsButton, 'openOptions', 'click', this, window),
         optionsButton
       ))(window.document.createElement`options`)
     );
     this.main.appendChild(
       ((startButton)=>(
         startButton.innerText = 'Start game',
+        this.assignEvent(startButton, 'initGame', 'click', this.Game, window),
         startButton
       ))(window.document.createElement`start`)
     );
     this.main.appendChild(window.document.createElement`postGame`);
     
     this.options = window.document.createElement`playerOptions`;
+    (players=>{
+      
+
+    })(this.Game.players)
     this.append(this.main, window);
     
   }
-  assignEvents(Menu = this, Game = this.Game, window = Game.window){
-    window.document.querySelector`options`.addEventListener('click', e=>(Menu.openOptions(window)));
-    window.document.querySelector`start`.addEventListener('click', e=>(Game.initGame(window)));
+  assignEvent(element, windowFunc='funcName', event, Instance={windowFunc:(window={})=>{}}, window){
+    element.addEventListener(event, e=>(Instance[windowFunc](window)));
   }
   append(element, window = this.Game.window) {
     ((body)=>(
       body.appendChild(element)
     ))(window.document.querySelector`body`);
-    this.assignEvents();
   }
   openOptions(window = this.Game.window) {
     console.log(window);
