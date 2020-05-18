@@ -298,7 +298,8 @@ class Game {
   ships =player=>player.ships;
   shots =ship=>ship.shots;
   input =(event, mode = this.mode)=>{
-    switch (mode) {
+    if (event.repeat) false;
+    else switch (mode) {
       case 'game': return this.gameInput(event);
       case 'menu': return this.menuInput(event);
     }
@@ -419,13 +420,13 @@ class Menu {
         header
       ))(window, window.document.createElement`header`)
     );
-    this.main.appendChild(
-      (optionsButton=>(
-        optionsButton.innerText = 'Options',
-        this.assignEvent(optionsButton, 'openOptions', 'click', this, window),
-        optionsButton
-      ))(window.document.createElement`options`)
-    );
+    // this.main.appendChild(
+    //   (optionsButton=>(
+    //     optionsButton.innerText = 'Options',
+    //     this.assignEvent(optionsButton, 'openOptions', 'click', this, window),
+    //     optionsButton
+    //   ))(window.document.createElement`options`)
+    // );
     this.main.appendChild(
       ((startButton)=>(
         startButton.innerText = 'Start game',
@@ -433,15 +434,53 @@ class Menu {
         startButton
       ))(window.document.createElement`start`)
     );
+    this.main.appendChild(this.playerOptions(Game));
     this.main.appendChild(window.document.createElement`postGame`);
     
-    this.options = window.document.createElement`playerOptions`;
-    (players=>{
-      
-
-    })(this.Game.players)
+    // this.options = window.document.createElement`playerOptions`;
+    // ((player, i)=>{
+    //   while(player){
+    //     // add player mapping element group
+    //     this.options.appendChild(((maps, element)=>{
+    //       element.id = i;
+    //       for (let map in maps) {
+    //         element.innerText = map;
+    //         element.appendChild((input=>{
+    //           input.type = 'text';
+    //           input.value = maps[map];
+    //           return input;
+    //         })(window.document.createElement`input`))
+    //       }
+    //       return element;
+    //     })(player.data.direction, window.document.createElement('player')))
+    //     player = player.next;
+    //   }
+    // })(Game.players.head, 0)
     this.append(this.main, window);
     
+  }
+
+  playerOptions=(Game, window=Game.window)=>{
+    return (element=>(
+      ((player, i)=>{
+        while(player){
+          element.appendChild(((maps, playerMap)=>{
+            playerMap.id = i;
+            for (let map in maps) {
+              playerMap.innerText = map;
+              playerMap.append((input=>(
+                input.type = 'text',
+                input.value = maps[map],
+                input
+              ))(window.document.createElement`input`))
+            }
+            return playerMap;
+          })(player.data.direction, window.document.createElement('player')))
+          player = player.next;
+        }
+      })(Game.players.head, 0),
+      element // all player direction mapping groups
+    ))(window.document.createElement`playerOptions`)
   }
   assignEvent(element, windowFunc='funcName', event, Instance={windowFunc:(window={})=>{}}, window){
     element.addEventListener(event, e=>(Instance[windowFunc](window)));
@@ -452,7 +491,8 @@ class Menu {
     ))(window.document.querySelector`body`);
   }
   openOptions(window = this.Game.window) {
-    console.log(window);
+    // console.log(this.options);
+    window.document.querySelector`body`.appendChild
   }
   postGame(team) {
     this.append(this.main);
@@ -466,22 +506,22 @@ class Menu {
 
 const defaultMap =()=>( [
   {
-    up:     {code:'KeyE'  },
-    left:   {code:'KeyS'  },
-    down:   {code:'KeyD'  },
-    right:  {code:'KeyF'  }
+    up:     {code:'KeyE',key:'E'},
+    left:   {code:'KeyS',key:'S'},
+    down:   {code:'KeyD',key:'D'},
+    right:  {code:'KeyF',key:'F'}
   },
   {
-    up:     {code:'ArrowUp'     },
-    left:   {code:'ArrowLeft'   },
-    down:   {code:'ArrowDown'   },
-    right:  {code:'ArrowRight'  }
+    up:     {code:'ArrowUp',key:'ArrUp'     },
+    left:   {code:'ArrowLeft',key:'ArrLeft'   },
+    down:   {code:'ArrowDown',key:'ArrDown'   },
+    right:  {code:'ArrowRight',key:'ArrRight'  }
   },
   {
-    up:     {code:'KeyW'  },
-    left:   {code:'KeyA'  },
-    down:   {code:'KeyS'  },
-    right:  {code:'KeyD'  }
+    up:     {code:'KeyW',key:'W'},
+    left:   {code:'KeyA',key:'A'},
+    down:   {code:'KeyS',key:'S'},
+    right:  {code:'KeyD',key:'D'}
   }
 ] );
 
