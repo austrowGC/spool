@@ -34,6 +34,8 @@ addPlayer {
   height: 1em;
   text-align: center;
   padding-bottom:2px;
+  margin-right: .420em;
+  margin-bottom: .420em;
 }
 start:active,
 options:active,
@@ -41,23 +43,34 @@ removePlayer:active,
 addPlayer:active {
   border-style: inset;
 }
-menu #cyan,
+#cyan,
 player:nth-child(1) {
-  color: cyan;
+  color: #00FFFF;
+  border-color: #00FFFF;
   background-color: inherit;
 }
-menu #magenta,
+#magenta,
 player:nth-child(2) {
-  color: magenta;
+  color: #FF00FF;
+  border-color: #FF00FF;
   background-color: inherit;
 }
-menu #yellow,
+#yellow,
 player:nth-child(3) {
-  color: yellow;
+  color: #FFFF00;
+  border-color: #FFFF00;
   background-color: inherit;
 }
 player {
   display: inline-block;
+  border: 1px solid;
+  padding-top: .420em;
+  padding-left: .420em;
+  margin-right: .420em;
+  margin-bottom: .420em;
+}
+player * {
+  float: left;
 }
 menu map {
   padding: 1px;
