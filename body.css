@@ -64,8 +64,7 @@ player:nth-child(3) {
 player {
   display: inline-block;
   border: 1px solid;
-  padding-top: .420em;
-  padding-left: .420em;
+  padding: .420em;
   margin-right: .420em;
   margin-bottom: .420em;
 }
