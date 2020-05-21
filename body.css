@@ -17,7 +17,10 @@ header {
   background-color: initial;
 }
 start,
-options {
+options,
+removePlayer,
+addPlayer {
+  display: inline-block;
   border-style: outset;
   border-color: #eee;
   border-width: 2px;
@@ -25,19 +28,53 @@ options {
   padding-left: 2px;
   padding-right: 2px;
 }
+removePlayer,
+addPlayer {
+  width: 1em;
+  height: 1em;
+  text-align: center;
+  padding-bottom:2px;
+}
 start:active,
-options:active {
+options:active,
+removePlayer:active,
+addPlayer:active {
   border-style: inset;
 }
-menu #cyan {
+menu #cyan,
+player:nth-child(1) {
   color: cyan;
   background-color: inherit;
 }
-menu #magenta {
+menu #magenta,
+player:nth-child(2) {
   color: magenta;
   background-color: inherit;
 }
-menu #yellow {
+menu #yellow,
+player:nth-child(3) {
   color: yellow;
   background-color: inherit;
+}
+player {
+  display: inline-block;
+}
+menu map {
+  padding: 1px;
+  margin-bottom: 1px;
+  border: 1px solid #eee;
+  min-width: 1.33em;
+  height: 1.33em;
+  cursor: default;
+  caret-color: #00000000;
+  overflow: hidden;
+}
+map,
+label {
+  float: left;
+  width: 3em;
+  text-align: center;
+}
+label {
+  clear: left;
 }
