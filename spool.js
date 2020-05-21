@@ -93,20 +93,17 @@ class Collision {
 
 }
 class Player {
-  constructor(map = {up:'',left:'',down:'',right:''}, team = 'red', spawnP = new V2d(0,0)) {
+  constructor(map, team = 'red', spawnP = new V2d(0,0)) {
     this.team =()=> team;
-    this.direction = {
+    this.direction = map??{
       up:     {code:'ArrowUp',    key:'ArrowUp'     },
       left:   {code:'ArrowLeft',  key:'ArrowLeft'   },
       down:   {code:'ArrowDown',  key:'ArrowDown'   },
       right:  {code:'ArrowRight', key:'ArrowRight'  }
     };
-    // this.direction.up = map.up??'ArrowUp';
-    // this.direction.left = map.left??'ArrowLeft';
-    // this.direction.down = map.down??'ArrowDown';
-    // this.direction.right = map.right??'ArrowRight';
     this.Position = spawnP;
     this.ships = new LinkList();
+    // consider moving shots, don't remove player until ships&shots head==null
   }
   
   action =(event, ship, func = null)=>{
@@ -349,12 +346,7 @@ class Game {
           player.ships.append(new Entity(player, {radius:12}, player.Position)),
           player
         ))(new Player(
-          (map=>({
-            up: map[0].data,
-            left: map[1].data,
-            down: map[2].data,
-            right: map[3].data
-          }))(playerMap.querySelectorAll`map`),
+          this.Menu.convertNodeListMap(playerMap.querySelectorAll`map`),
           this.Arena.team()[i],
           this.Arena.defaultSpawns()[i]))
       );
@@ -438,38 +430,55 @@ class Menu {
         startButton
       ))(window.document.createElement`start`)
     );
+    this.main.appendChild(this.elementAddPlayer(this, window));
     this.main.appendChild(window.document.createElement`postGame`);
     this.main.appendChild(this.playerOptions(Game));
-    this.main.appendChild(this.elementAddPlayer(window));
     this.append(this.main, window);
   }
 
   playerOptions=(Game, window=Game.window)=>{
     return (optionsElement=>(
-      ((player, i)=>{
+      ((player, i=1)=>{
         while(player){
           optionsElement.appendChild(((inputGroup, j)=>(
-            inputGroup.innerText = 'player ' + (j+1) + "\n",
+            inputGroup.innerText = 'player ' + j,
             inputGroup.appendChild(this.elementRmPlayer(window)),
             this.mapGroupChildren(player.data.direction, inputGroup, window),
             inputGroup
-          ))(window.document.createElement('player'), i));
-          player = player.next, i++;
+          ))(window.document.createElement('player'), i++));
+          player = player.next;
         }
-      })(Game.players.head, 0),
+      })(Game.players.head),
       optionsElement
     ))(window.document.createElement`playerOptions`)
   };
+  // elementEmptyPlayer=(Menu, window=Menu.Game.window)=>{
+  //   Menu.main.appendChild
+  // }
   elementRmPlayer=window=>{
     return (element=>(
       element.innerText = '-',
+      element.addEventListener('mouseup', e=>{
+        console.log(e);
+      }),
       element
     ))(window.document.createElement`removePlayer`)
   };
-  elementAddPlayer=window=>{
+  elementAddPlayer=(Menu, window=Menu.Game.window)=>{
     return (element=>(
       element.innerText = '+',
-      // element.assignEvent(),
+      element.addEventListener('mouseup', e=>{
+        (playerOptions=>{
+          
+          playerOptions.appendChild(((inputGroup, j)=>(
+            inputGroup.innerText = 'player ' + j,
+            inputGroup.appendChild(Menu.elementRmPlayer(window)),
+            Menu.mapGroupChildren((new Player()).direction, inputGroup, window),
+            inputGroup
+          ))(e.view.document.createElement('player'), (playerOptions.children.length + 1)));
+
+        })(e.view.document.querySelector`playerOptions`)
+      }),
       element
     ))(window.document.createElement`addPlayer`)
   }
@@ -487,13 +496,13 @@ class Menu {
     return ((element,key,code)=>(
       element.setAttribute('contentEditable', true),
       element.innerText = key,
-      element.data = code,
+      element.data = {code:code, key:key},
       element.addEventListener('keydown', e=>{
         if (e.repeat) false;
         else {
           e.target.value = this.fixKey(e.key);
           e.target.innerText = e.target.value;
-          e.target.data = e.code;
+          e.target.data = {code:e.code, key:e.key}
         }
       }),
       element
@@ -510,7 +519,17 @@ class Menu {
     }
     return char;
   }
-  assignEvent(element, windowFunc='funcName', event, Instance={windowFunc:(window={})=>{}}, window){
+  convertNodeListMap(list) {
+    return (map=>(
+      {
+        up: map[0],
+        left: map[1],
+        down: map[2],
+        right: map[3]
+      }
+    ))(Array.from(list).map(n=>n.data));
+  }
+  assignEvent(element, windowFunc='funcName', event, Instance={windowFunc:_=>{}}, window){
     element.addEventListener(event, e=>(Instance[windowFunc](window)));
   }
   append(element, window = this.Game.window) {
@@ -530,28 +549,6 @@ class Menu {
     ))(this.Game.window.document.querySelector`postGame`, team);
   }
 }
-
-const defaultMap =()=>( [
-  {
-    up:     {code:'KeyE',key:'e'},
-    left:   {code:'KeyS',key:'s'},
-    down:   {code:'KeyD',key:'d'},
-    right:  {code:'KeyF',key:'f'}
-  },
-  {
-    up:     {code:'ArrowUp',    key:'ArrowUp'     },
-    left:   {code:'ArrowLeft',  key:'ArrowLeft'   },
-    down:   {code:'ArrowDown',  key:'ArrowDown'   },
-    right:  {code:'ArrowRight', key:'ArrowRight'  }
-  },
-  {
-    up:     {code:'KeyW',key:'w'},
-    left:   {code:'KeyA',key:'a'},
-    down:   {code:'KeyS',key:'s'},
-    right:  {code:'KeyD',key:'d'}
-  }
-] );
-
 ((window)=>{
   new Game(window);
 })(this);
