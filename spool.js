@@ -430,36 +430,34 @@ class Menu {
         startButton
       ))(window.document.createElement`start`)
     );
-    this.main.appendChild(this.elementAddPlayer(this, window));
     this.main.appendChild(window.document.createElement`postGame`);
     this.main.appendChild(this.playerOptions(Game));
+    this.main.appendChild(this.elementAddPlayer(this, window));
     this.append(this.main, window);
   }
 
   playerOptions=(Game, window=Game.window)=>{
     return (optionsElement=>(
-      ((player, i=1)=>{
+      ((player)=>{
         while(player){
-          optionsElement.appendChild(((inputGroup, j)=>(
-            inputGroup.innerText = 'player ' + j,
+          optionsElement.appendChild(((inputGroup)=>(
             inputGroup.appendChild(this.elementRmPlayer(window)),
             this.mapGroupChildren(player.data.direction, inputGroup, window),
             inputGroup
-          ))(window.document.createElement('player'), i++));
+          ))(window.document.createElement('player')));
           player = player.next;
         }
       })(Game.players.head),
       optionsElement
     ))(window.document.createElement`playerOptions`)
   };
-  // elementEmptyPlayer=(Menu, window=Menu.Game.window)=>{
-  //   Menu.main.appendChild
-  // }
   elementRmPlayer=window=>{
     return (element=>(
       element.innerText = '-',
       element.addEventListener('mouseup', e=>{
-        console.log(e);
+        (elementP=>(
+          elementP.parentElement.removeChild(elementP)
+        ))(e.target.parentElement);
       }),
       element
     ))(window.document.createElement`removePlayer`)
@@ -471,11 +469,10 @@ class Menu {
         (playerOptions=>{
           
           playerOptions.appendChild(((inputGroup, j)=>(
-            inputGroup.innerText = 'player ' + j,
             inputGroup.appendChild(Menu.elementRmPlayer(window)),
             Menu.mapGroupChildren((new Player()).direction, inputGroup, window),
             inputGroup
-          ))(e.view.document.createElement('player'), (playerOptions.children.length + 1)));
+          ))(e.view.document.createElement('player')));
 
         })(e.view.document.querySelector`playerOptions`)
       }),
