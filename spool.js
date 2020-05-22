@@ -441,7 +441,7 @@ class Menu {
       ((player)=>{
         while(player){
           optionsElement.appendChild(((inputGroup)=>(
-            inputGroup.appendChild(this.elementRmPlayer(window)),
+            inputGroup.appendChild(this.elementRmPlayer(this, window)),
             this.mapGroupChildren(player.data.direction, inputGroup, window),
             inputGroup
           ))(window.document.createElement('player')));
@@ -451,13 +451,20 @@ class Menu {
       optionsElement
     ))(window.document.createElement`playerOptions`)
   };
-  elementRmPlayer=window=>{
+  elementRmPlayer=(Menu, window=Menu.Game.window)=>{
     return (element=>(
       element.innerText = '-',
       element.addEventListener('mouseup', e=>{
-        (elementP=>(
-          elementP.parentElement.removeChild(elementP)
-        ))(e.target.parentElement);
+        // Event scope
+        ((playerTile, playerOptions)=>(
+          playerOptions.removeChild(playerTile),
+          Menu.toggleStart(playerOptions.children.length, window)
+        ))(e.target.parentElement, e.target.parentElement.parentElement);
+        if (window.document.querySelector`addPlayer`) false;
+        else {
+          window.document.querySelector`menu`.appendChild(Menu.elementAddPlayer(Menu, window));
+        }
+        // 
       }),
       element
     ))(window.document.createElement`removePlayer`)
@@ -466,20 +473,32 @@ class Menu {
     return (element=>(
       element.innerText = '+',
       element.addEventListener('mouseup', e=>{
+        // Event scope
         (playerOptions=>{
-          
           playerOptions.appendChild(((inputGroup, j)=>(
-            inputGroup.appendChild(Menu.elementRmPlayer(window)),
+            inputGroup.appendChild(Menu.elementRmPlayer(Menu, window)),
             Menu.mapGroupChildren((new Player()).direction, inputGroup, window),
             inputGroup
           ))(e.view.document.createElement('player')));
+          if (playerOptions.children.length > 3) {
+            playerOptions.parentElement.removeChild(window.document.querySelector`addPlayer`);
+          }
+          Menu.toggleStart(playerOptions.children.length, window);
 
         })(e.view.document.querySelector`playerOptions`)
+        // 
       }),
       element
     ))(window.document.createElement`addPlayer`)
   }
 
+  toggleStart(numPlayers, window) {
+    return ((start)=>{
+      if (numPlayers > 0) start.setAttribute('disabled', null);
+      else start.setAttribute('disabled', 'disabled');
+
+    })(window.document.querySelector`start`);
+  }
   mapGroupChildren(maps, parentElement, window) {
     for (let map in maps) {
       parentElement.appendChild(((element,text)=>(
@@ -527,7 +546,10 @@ class Menu {
     ))(Array.from(list).map(n=>n.data));
   }
   assignEvent(element, windowFunc='funcName', event, Instance={windowFunc:_=>{}}, window){
-    element.addEventListener(event, e=>(Instance[windowFunc](window)));
+    element.addEventListener(event, e=>{
+      if (e.target.getAttribute('disabled')==='disabled') false;
+      else Instance[windowFunc](window);
+    });
   }
   append(element, window = this.Game.window) {
     ((body)=>(
