@@ -43,6 +43,12 @@ removePlayer:active,
 addPlayer:active {
   border-style: inset;
 }
+:disabled {
+  pointer-events: none;
+  display: none;
+  visibility: hidden;
+  background: #eeeeee;
+}
 #cyan,
 player:nth-child(1) {
   color: #00FFFF;
