@@ -48,12 +48,16 @@ class LinkList {
   }
   remove(data) {
     let cursor = this.head, prev = null;
-    if (cursor.data === data) return this.dropHead();
-    else prev = cursor, cursor = cursor.next;
-    while (cursor) {
-      if (cursor.data === data) return prev.next = cursor.next;
-      prev = cursor;
-      cursor = cursor.next;
+    if (cursor) {
+      if (cursor.data === data) return this.dropHead();
+      else prev = cursor, cursor = cursor.next;
+      while (cursor) {
+        if (cursor.data === data) return (prev.next = cursor.next, cursor.data);
+        prev = cursor;
+        cursor = cursor.next;
+      }
+    } else {
+      console.log('cursor was null');
     }
   }
   map(func) {
@@ -198,6 +202,7 @@ class Arena {
     new V2d(this.innerOffset(), 3*this.innerOffset()),
   ] );
   team =()=> [ 'cyan', 'magenta', 'yellow', 'grey' ];
+  meteor = '#333333';
   remove =body=>(body.removeChild(this.cxt.canvas));
 
   nOOB(Entity) { 
@@ -268,7 +273,6 @@ class Arena {
     } else {
       this.cxt.fillRect(Entity.Position.x, Entity.Position.y, Entity.width, Entity.height);
     }
-    this.renderCenter(Entity);
     return Entity;
   }
   clear() {
@@ -290,18 +294,11 @@ class Game {
     this.inputs = new LinkList();
     this.mode = 'menu';
     this.Menu = new Menu(this);
+    this.lastUpdate = 0;
+    this.meteorTimer = 0;
+
   }
   
-  emptyMap ={
-    up:     {code:'',key:''},
-    left:   {code:'',key:''},
-    down:   {code:'',key:''},
-    right:  {code:'',key:''}
-  };
-  meteors =()=>new Player(this.emptyMap, 'gray');
-
-  ships =player=>player.ships;
-  shots =ship=>ship.shots;
   input =(event, mode = this.mode)=>{
     if (event.repeat) false;
     else switch (mode) {
@@ -324,25 +321,76 @@ class Game {
       window.addEventListener('keydown', this.input),
       window);
   };
-  update=()=>{
+  meteorsUpdate=(time=0)=>{
+    this.Arena.clear();
+    while (this.collisions.head) {
+      (collision=>{
+        collision[0].owner.ships.remove(collision[0]);
+        collision[1].owner.ships.remove(collision[1]);
+        if (collision[0].owner===this.players.head.data) this.players.remove(collision[0].owner); //end game here
+        if (collision[1].owner===this.players.head.data) this.players.remove(collision[1].owner); //end game here
+      })(this.collisions.dropHead())
+    }
+    while (this.hits.head) {
+      (hit=>{
+        hit.shot.owner.shots.remove(hit.shot);
+        hit.ship.owner.ships.remove(hit.ship);
+        if (hit.ship.owner===this.players.head.data) this.players.remove(hit.ship.owner);
+      })(this.hits.dropHead())
+    }
+    ((player, meteors)=>{
+      while (meteors) {
+        if (this.meteorTimer > 4000) {
+          meteors.data.ships.append(new Entity(
+            meteors.data,
+            {radius:16},
+            meteors.data.Position,
+            new V2d(
+              (player.data.ships.head.data.Position.x - meteors.data.Position.x)/this.Arena.width*2,
+              (player.data.ships.head.data.Position.y - meteors.data.Position.y)/this.Arena.height*2
+          )));
+        }
+        for (let ship = meteors.data.ships.head; ship; ship = ship.next) {
+          this.Arena.renderShip(ship.data);
+          this.findOverlaps(ship.data);
+          // this.damp(ship.data);
+          for (let shot = ship.data.shots.head; shot; shot = shot.next) {
+            // this.Arena.renderShot(shot.data);
+          }
+        }
+        meteors = meteors.next;
+      }
+      for (let ship = player.data.ships.head; ship; ship = ship.next) {
+        for (let shot = ship.data.shots.head; shot; shot = shot.next) {
+          this.Arena.renderShot(shot.data);
+        }
+        this.Arena.renderShip(ship.data);
+        this.damp(ship.data);
+        this.findOverlaps(ship.data);
+      }
+    })(this.players.head, this.players.head.next);
+    if (this.meteorTimer > 4000) {
+      this.meteorTimer -= this.meteorTimer;
+    }
+    this.meteorTimer += time - this.lastUpdate;
+    this.lastUpdate = time;
+    if (this.resolveMeteors(time)===false) this.window.requestAnimationFrame(this.meteorsUpdate);
+  };
+  update=(time=0)=>{
     this.Arena.clear();
     this.resolveCollisions();
     this.resolveHits();
     for (let player = this.players.head; player; player = player.next) {
       for (let ship = player.data.ships.head; ship; ship = ship.next) {
         for (let shot = ship.data.shots.head; shot; shot = shot.next) {
-          // shot data
           this.Arena.renderShot(shot.data);
         }
-        // ship data
         this.Arena.renderShip(ship.data);
         this.damp(ship.data);
         this.findOverlaps(ship.data);
       }
-      // player data
     }
     if (this.resolveGame()===false) this.window.requestAnimationFrame(this.update);
-    
   };
 
   initGame(playerMapList, window = this.window) {
@@ -360,14 +408,49 @@ class Game {
       );
       i++;
     }
-    // if (i<2)
     ((body, menu)=>(
       body.removeChild(menu),
       body.appendChild(this.Arena.cxt.canvas)
     ))(window.document.querySelector`body`, window.document.querySelector`menu`);
     this.mode = 'game';
     this.inputSetup(window);
-    this.update();
+    if (playerMapList.length > 1) this.update();
+    else {
+      this.players.append(new Player({
+        up:     {code:'',key:''},
+        left:   {code:'',key:''},
+        down:   {code:'',key:''},
+        right:  {code:'',key:''}
+      },
+      this.Arena.meteor,
+      new V2d(0,0)));
+      this.players.append(new Player({
+        up:     {code:'',key:''},
+        left:   {code:'',key:''},
+        down:   {code:'',key:''},
+        right:  {code:'',key:''}
+      },
+      this.Arena.meteor,
+      new V2d(this.Arena.width,this.Arena.height)));
+      this.players.append(new Player({
+        up:     {code:'',key:''},
+        left:   {code:'',key:''},
+        down:   {code:'',key:''},
+        right:  {code:'',key:''}
+      },
+      this.Arena.meteor,
+      new V2d(this.Arena.width,0)));
+      this.players.append(new Player({
+        up:     {code:'',key:''},
+        left:   {code:'',key:''},
+        down:   {code:'',key:''},
+        right:  {code:'',key:''}
+      },
+      this.Arena.meteor,
+      new V2d(0,this.Arena.height)));
+      this.player = this.players.head.data;
+      this.meteorsUpdate();
+    }
   }
   findOverlaps(Data) {
     let player, ship, shot;
@@ -381,7 +464,7 @@ class Game {
             }
           }
           if (Data.Collision.detect(ship.data)) {
-            this.collisions.append({ship1:Data,ship2:ship.data});
+            this.collisions.append({0:Data,1:ship.data});
           }
         }
       }
@@ -399,9 +482,8 @@ class Game {
   resolveCollisions() {
     while (this.collisions.head) {
       (collision=>{
-        console.log(collision);
         // collision.ship1.Velocity = collision.ship1.Velocity.sum(collision.ship2.Velocity);
-        // collision
+        // collision.ship1.owner.ships.remove(ship1);
       })(this.collisions.dropHead())
     }
   }
@@ -419,6 +501,17 @@ class Game {
       this.Arena.remove(window.document.querySelector`body`);
       this.Menu.postGame(this.players.head.data.team());
     }
+  }
+  resolveMeteors(time, window = this.window) {
+    if (this.players.head.data==this.player) return false;
+    else {
+      this.Arena.remove(window.document.querySelector`body`);
+      this.Menu.append(this.Menu.main);
+      ((element)=>(
+        element.innerText = 'Pulverized by meteors~ ' + time/60000,
+        element
+      ))(window.document.querySelector`postGame`);
+      }
   }
   
 }
@@ -442,7 +535,6 @@ class Menu {
             Game.initGame(window.document.querySelector`playerOptions`.children, window);
           }
         }),
-        // this.assignEvent(startButton, 'initGame', 'click', this.Game, window),
         startButton
       ))(window.document.createElement`start`)
     );
@@ -561,19 +653,10 @@ class Menu {
       }
     ))(Array.from(list).map(n=>n.data));
   }
-  assignEvent(element, windowFunc='funcName', event, Instance={windowFunc:_=>{}}, window){
-    element.addEventListener(event, e=>{
-      if (e.target.getAttribute('disabled')==='disabled') false;
-      else Instance[windowFunc](window);
-    });
-  }
   append(element, window = this.Game.window) {
     ((body)=>(
       body.appendChild(element)
     ))(window.document.querySelector`body`);
-  }
-  openOptions(window = this.Game.window) {
-    // window.document.querySelector`body`.appendChild
   }
   postGame(team) {
     this.append(this.main);
