@@ -292,6 +292,14 @@ class Game {
     this.Menu = new Menu(this);
   }
   
+  emptyMap ={
+    up:     {code:'',key:''},
+    left:   {code:'',key:''},
+    down:   {code:'',key:''},
+    right:  {code:'',key:''}
+  };
+  meteors =()=>new Player(this.emptyMap, 'gray');
+
   ships =player=>player.ships;
   shots =ship=>ship.shots;
   input =(event, mode = this.mode)=>{
@@ -337,10 +345,10 @@ class Game {
     
   };
 
-  initGame(window = this.window) {
+  initGame(playerMapList, window = this.window) {
     this.players.clear();
     let i = 0;
-    for (let playerMap of window.document.querySelector`playerOptions`.children) {
+    for (let playerMap of playerMapList) {
       this.players.append(
         (player=>(
           player.ships.append(new Entity(player, {radius:12}, player.Position)),
@@ -352,6 +360,7 @@ class Game {
       );
       i++;
     }
+    // if (i<2)
     ((body, menu)=>(
       body.removeChild(menu),
       body.appendChild(this.Arena.cxt.canvas)
@@ -411,6 +420,7 @@ class Game {
       this.Menu.postGame(this.players.head.data.team());
     }
   }
+  
 }
 class Menu {
   constructor(Game = {}, window = Game.window) {
@@ -426,7 +436,13 @@ class Menu {
     this.main.appendChild(
       ((startButton)=>(
         startButton.innerText = 'Start game',
-        this.assignEvent(startButton, 'initGame', 'click', this.Game, window),
+        startButton.addEventListener('click', e=>{
+          if (e.target.getAttribute('disabled')) false;
+          else {
+            Game.initGame(window.document.querySelector`playerOptions`.children, window);
+          }
+        }),
+        // this.assignEvent(startButton, 'initGame', 'click', this.Game, window),
         startButton
       ))(window.document.createElement`start`)
     );
@@ -494,7 +510,7 @@ class Menu {
 
   toggleStart(numPlayers, window) {
     return ((start)=>{
-      if (numPlayers > 0) start.setAttribute('disabled', null);
+      if (numPlayers > 0) start.removeAttribute`disabled`;
       else start.setAttribute('disabled', 'disabled');
 
     })(window.document.querySelector`start`);
