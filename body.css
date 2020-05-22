@@ -10,6 +10,7 @@ menu {
 menu > * {
   float: left;
   clear: both;
+  margin-bottom: .420em
 }
 header {
   font-size: 2em;
