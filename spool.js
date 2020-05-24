@@ -625,9 +625,11 @@ class Menu {
         if (e.repeat) false;
         else {
           e.target.value = this.fixKey(e.key);
-          e.target.innerText = e.target.value;
-          e.target.data = {code:e.code, key:e.key}
+          e.target.data = {code:e.code, key:e.key};
         }
+      }),
+      element.addEventListener('input', e=>{
+        if (e.target.innerText != e.target.value) e.target.innerText = e.target.value;
       }),
       element
     ))(window.document.createElement`map`, this.fixKey(map.key), map.code);
