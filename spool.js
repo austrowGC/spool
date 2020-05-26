@@ -192,6 +192,7 @@ class Arena {
     this.cxt.strokeStyle = 'white';
   }
 
+  shipImage = (image=>(image.src='ship.png', image))(new Image(24, 24));
   endAngle = 2*Math.PI;
   defaultSide =()=> 600;
   innerOffset =(n=this.defaultSide())=> n/4;
@@ -251,12 +252,13 @@ class Arena {
     }
     return Entity;
   }
-  renderShip(Entity) {
+  updateShip(Entity) {
     Entity.travel();
     this.render(Entity);
+    this.cxt.drawImage(this.shipImage, Entity.Position.x - Entity.width/2, Entity.Position.y - Entity.height/2);
     return this.courseCorrect(Entity);
   }
-  renderShot(Entity) {
+  updateShot(Entity) {
     Entity.travel();
     this.render(Entity);
     if (this.exceedsBound(Entity)) Entity.owner.shots.remove(Entity);
@@ -343,7 +345,7 @@ class Game {
         if (this.meteorTimer > 4000) {
           meteors.data.ships.append(new Entity(
             meteors.data,
-            {radius:16},
+            {radius:12},
             meteors.data.Position,
             new V2d(
               (player.data.ships.head.data.Position.x - meteors.data.Position.x)/this.Arena.width*2,
@@ -351,20 +353,20 @@ class Game {
           )));
         }
         for (let ship = meteors.data.ships.head; ship; ship = ship.next) {
-          this.Arena.renderShip(ship.data);
+          this.Arena.updateShip(ship.data);
           this.findOverlaps(ship.data);
           // this.damp(ship.data);
           for (let shot = ship.data.shots.head; shot; shot = shot.next) {
-            // this.Arena.renderShot(shot.data);
+            // this.Arena.updateShot(shot.data);
           }
         }
         meteors = meteors.next;
       }
       for (let ship = player.data.ships.head; ship; ship = ship.next) {
         for (let shot = ship.data.shots.head; shot; shot = shot.next) {
-          this.Arena.renderShot(shot.data);
+          this.Arena.updateShot(shot.data);
         }
-        this.Arena.renderShip(ship.data);
+        this.Arena.updateShip(ship.data);
         this.damp(ship.data);
         this.findOverlaps(ship.data);
       }
@@ -374,7 +376,7 @@ class Game {
     }
     this.meteorTimer += time - this.lastUpdate;
     this.lastUpdate = time;
-    if (this.resolveMeteors(time)===false) this.window.requestAnimationFrame(this.meteorsUpdate);
+    if (this.resolveMeteors()===false) this.window.requestAnimationFrame(this.meteorsUpdate);
   };
   update=(time=0)=>{
     this.Arena.clear();
@@ -383,9 +385,9 @@ class Game {
     for (let player = this.players.head; player; player = player.next) {
       for (let ship = player.data.ships.head; ship; ship = ship.next) {
         for (let shot = ship.data.shots.head; shot; shot = shot.next) {
-          this.Arena.renderShot(shot.data);
+          this.Arena.updateShot(shot.data);
         }
-        this.Arena.renderShip(ship.data);
+        this.Arena.updateShip(ship.data);
         this.damp(ship.data);
         this.findOverlaps(ship.data);
       }
@@ -502,13 +504,13 @@ class Game {
       this.Menu.postGame(this.players.head.data.team());
     }
   }
-  resolveMeteors(time, window = this.window) {
+  resolveMeteors(window = this.window) {
     if (this.players.head.data==this.player) return false;
     else {
       this.Arena.remove(window.document.querySelector`body`);
       this.Menu.append(this.Menu.main);
       ((element)=>(
-        element.innerText = 'Pulverized by meteors~ ' + time/60000,
+        element.innerText = 'Pulverized by debris~ ',
         element
       ))(window.document.querySelector`postGame`);
       }
