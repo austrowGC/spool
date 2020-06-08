@@ -7,8 +7,8 @@ Writing, graphics, and code by Gregory C. Austrow
 This is the first computer game I have ideated, designed, and implemented. 
 Thank you for taking the time to visit the readme, I hope you will or already have done so for the game itself.
 
-I am presently hosting the game at [my github page](austrowGC.github.io/spool).
-You may also download this repository to your local files and open the [index.html](https://github.com/austrowGC/spool/blob/master/index.html) with an internet browser application.
+I am presently hosting the game at [my github page](https://austrowGC.github.io/spool).
+You may also download this repository to your local files and open the [index.html](index.html) with an internet browser application.
 
 Development involved use of Firefox 77.0.1 (64-bit) & Chromium 83.0.4103.61 snap (64-bit).
 
