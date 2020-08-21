@@ -1,88 +1,66 @@
-class LinkNode {
-  constructor(data, next = null) {
-    this.data = data;
-    this.next = next;
-  }
+const LinkNode = (data, next = null) => {
+  const data = data
+  const next = next
+  return this
 }
-class LinkList {
-  constructor(){
-    this.head = null;
-  }
-
-  clear() {
-    this.head = null;
-  }
-  dropHead() {
-    let value = this.head.data;
-    if (value) {
-      this.head = this.head.next;
-    }
-    return value;
-  }
-  prepend(data) {
-    this.head = new LinkNode(data, this.head);
-  }
-  append(data) {
-    let cursor;
-    if (this.head == null) {
-      this.prepend(data);
-    } else {
-      cursor = this.head;
-      while (cursor.next !== null) cursor = cursor.next;
-      cursor.next = new LinkNode(data, null, cursor);
-    }
-  }
-  locate(data) {
-    let cursor = this.head;
-    while (cursor) {
-      if (cursor.data === data) break;
-      else cursor = cursor.next;
-
-    }
-    return cursor;
-  }
-  search(data) {
-    let node = this.locate(data);
-    let value = node ? node.data : null;
-    return value;
-  }
-  remove(data) {
-    let cursor = this.head, prev = null;
-    if (cursor) {
-      if (cursor.data === data) return this.dropHead();
-      else prev = cursor, cursor = cursor.next;
-      while (cursor) {
-        if (cursor.data === data) return (prev.next = cursor.next, cursor.data);
-        prev = cursor;
-        cursor = cursor.next;
+const LinkList = () => {
+    const head
+    return {
+      clear: () => head = null,
+      dropHead: ()=>{
+        let value = head?.data
+        head = head?.next
+        return value
+      },
+      prepend: (data) => head = LinkNode(data, head),
+      append: (data) => {
+        let node
+        if (head == null) {
+          prepend(data)
+        } else {
+          node = head
+          while (node.next != null) node = node.next
+          node.next = LinkNode(data)
+        }
+      },
+      locate: (data) => {
+        let node = head
+        while (node) {
+          if (node.data == data) break
+          else node = node.next
+        }
+        return node
+      },
+      search: (data) => (locate(data))?.data,
+      remove: (data) => {
+        let node = head, prev = null
+        if (node) {
+          if (node.data == data) return dropHead()
+          else prev = node, node = node.next
+          while (node) {
+            if (node?.data = data) {
+              prev.next = node.next
+              return node.data
+            }
+            prev = node
+            node = node.next
+          }
+        } else console.log(data, node, "already gone")
+      },
+      map: (f=_=>_, list=LinkList(), node=head) => {
+        return node? (list.append(f(node.data)), map(f, list, node.next)): list
       }
-    } else {
-      console.log('cursor was null');
     }
-  }
-  map(func) {
-    let cursor = this.head;
-    while (cursor) {
-      cursor.data[func]();
-      cursor = cursor.next;
-    }
-  }
 }
-class V2d {
-  constructor(x=0, y=0) { this.x = x, this.y = y }
-
-  sum=v=>(
-    v = isNaN(v) ? v : new V2d(v, v),
-    new V2d(this.x + v.x, this.y + v.y)
-  );
-  product=v=>(
-    v = isNaN(v) ? v : new V2d(v, v),
-    new V2d(this.x * v.x, this.y * v.y)
-  );
-  dist=v=>(
-    v = isNaN(v) ? v : new V2d(v, v),
-    Math.sqrt((this.x - v.x)**2 + (this.y - v.y)**2)
-  );
+const Vector = (x = 0, y = 0) => {
+  const x = x, y = y
+  return {
+    sum: (v) => Vector(x + (v?.x ?? v), y + (v?.y ?? v)),
+    product: (v) => Vector(x * (v?.x ?? v), y * (v?.y ?? v)),
+    distance: (v) => Math.sqrt(
+      (x - (v?.x ?? v))**2 + (y - (v?.y ?? v))**2
+    )
+  }
 }
 class Collision {
   constructor(owner = {}, onOverlap=()=>{}) {
