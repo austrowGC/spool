@@ -15,15 +15,15 @@ I have no plans to make this version compatible with browsers that do not suppor
 Development involved use of Firefox 77.0.1 (64-bit) & Chromium 83.0.4103.61 snap (64-bit).
 
 ## Menu
-Click the [+] graphic to add players. The [-] graphic removes that player when clicked.
+Click the `[+]` graphic to add players. The `[-]` graphic removes that player when clicked.
 Up, Left, Down, Right are by default assigned to the corresponding arrow keys on the keyboard.
 To reassign a button for a player, click on that player's graphic labeled by one of the four directions and then press the desired button on the keyboard.
 I recommend not duplicating any assignments between or across players; but who knows, maybe emergent game modes can be found that way.
-When you are ready to play, click the [Start game] graphic to begin the game.
+When you are ready to play, click the `[Start game]` graphic to begin the game.
 Color indicates which game graphic belongs to which player and to which button assignments it will respond.
 
 ## Gameplay
-Pressing the button assigned to Up will send a projectile up. The ship will travel in the opposite direction.
+Pressing the button assigned to Up will send a projectile up. The ship will travel in the opposite direction. 
 
 Projectiles travel until they pass the edge of the canvas.
 
