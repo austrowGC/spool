@@ -9,6 +9,8 @@ Thank you for taking the time to visit the readme, I hope you will or already ha
 
 I am presently hosting the game at [my github page](https://austrowGC.github.io/spool).
 You may also download this repository to your local files and open the [index.html](index.html) with an internet browser application.
+Spool is written with javascript ES6 language features and will not run in browsers which do not support these.
+I have no plans to make this version compatible with browsers that do not support ES6 language features.
 
 Development involved use of Firefox 77.0.1 (64-bit) & Chromium 83.0.4103.61 snap (64-bit).
 
