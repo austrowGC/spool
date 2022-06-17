@@ -366,7 +366,7 @@ class Game {
     ((body, menu)=>(
       body.removeChild(menu)
     ))(window.document.querySelector`body`, window.document.querySelector`menu`);
-    this.arena = new Arena(window);
+    this.arena = new Arena(window, window.height);
     this.players.clear();
     for (let num = 2, i = 0, p; i < num; i++) {
       this.players.append(

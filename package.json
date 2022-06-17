@@ -1,0 +1,14 @@
+{
+  "name": "spool",
+  "author": { 
+    "name": "greg austrow",
+    "url": "github.com/austroGC"
+   },
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^19.0.4"
+  }
+}
